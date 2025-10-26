@@ -6,7 +6,9 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "format": "prettier --check .",
+    "format:write": "prettier --write ."
   },
   "dependencies": {
     "react": "19.2.0",
@@ -19,6 +21,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.0.0"
+    "eslint-config-next": "16.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2"
   }
 }
