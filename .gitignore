@@ -36,11 +36,8 @@ yarn-error.log*
 
 # env files (keep examples tracked)
 .env*
-!.env.example
 frontend/.env*
-!frontend/.env*.example
 backend/.env*
-!backend/.env*.example
 
 # vercel
 .vercel
