@@ -2,6 +2,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useRouter } from "next/router";
 import { auth } from "@/lib/firebase";
 import type { Expense } from "@shared/types";
 
@@ -18,6 +19,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
@@ -27,6 +29,12 @@ export default function HomePage() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      void router.replace("/login");
+    }
+  }, [authLoading, user, router]);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;

@@ -1,18 +1,16 @@
 import Head from "next/head";
-import Link from "next/link";
 import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
-  linkWithPopup,
   onAuthStateChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
-  signOut,
   type User,
 } from "firebase/auth";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { useRouter } from "next/router";
 import { auth, googleProvider } from "@/lib/firebase";
 
 type AuthFormState = {
@@ -29,6 +27,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [shouldRedirectToDashboard, setShouldRedirectToDashboard] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
@@ -38,6 +38,12 @@ export default function LoginPage() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!checkingAuth && user && shouldRedirectToDashboard) {
+      void router.replace("/");
+    }
+  }, [checkingAuth, user, shouldRedirectToDashboard, router]);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -60,15 +66,17 @@ export default function LoginPage() {
     try {
       if (mode === "signup") {
         await createUserWithEmailAndPassword(auth, email, password);
-        setStatus("Account created! You are now signed in.");
+        setStatus("Account created! Redirecting to your expenses…");
       } else {
         await signInWithEmailAndPassword(auth, email, password);
-        setStatus("Signed in successfully.");
+        setStatus("Signed in successfully. Redirecting…");
       }
       setForm({ email: "", password: "" });
+      setShouldRedirectToDashboard(true);
     } catch (unknownError) {
       const message = resolveFirebaseError(unknownError);
       setError(message);
+      setShouldRedirectToDashboard(false);
     }
   };
 
@@ -77,27 +85,12 @@ export default function LoginPage() {
     setStatus(null);
     try {
       await signInWithPopup(auth, googleProvider);
-      setStatus("Signed in with Google.");
+      setStatus("Signed in with Google. Redirecting…");
+      setShouldRedirectToDashboard(true);
     } catch (unknownError) {
       const message = resolveFirebaseError(unknownError);
       setError(message);
-    }
-  };
-
-  const handleGoogleLink = async () => {
-    if (!auth.currentUser) {
-      setError("Sign in with email first, then you can link Google.");
-      return;
-    }
-
-    setError(null);
-    setStatus(null);
-    try {
-      await linkWithPopup(auth.currentUser, googleProvider);
-      setStatus("Google account linked to this user.");
-    } catch (unknownError) {
-      const message = resolveFirebaseError(unknownError);
-      setError(message);
+      setShouldRedirectToDashboard(false);
     }
   };
 
@@ -146,10 +139,6 @@ export default function LoginPage() {
     return "Unexpected error. Try again.";
   };
 
-  const hasGoogleLinked = Boolean(
-    user?.providerData.some((provider) => provider.providerId === "google.com"),
-  );
-
   return (
     <>
       <Head>
@@ -159,22 +148,24 @@ export default function LoginPage() {
           content="Authenticate with email/password or link your Google account for the Expense Tracker MVP."
         />
       </Head>
-      <main className="page">
-        <section className="panel">
-          <div className="panel__header">
-            <h1 className="panel__title">Account Access</h1>
-            {user ? (
-              <button
-                type="button"
-                className="button button--secondary"
-                onClick={() => signOut(auth)}
-              >
-                Sign out
-              </button>
-            ) : null}
+      <main className="page page--auth">
+        <section className="panel panel--auth">
+          <div className="panel__header panel__header--stacked">
+            <h1 className="panel__title">
+              {mode === "signup" ? "Create your account" : "Welcome back"}
+            </h1>
+            <p className="panel__subtitle">
+              {mode === "signup"
+                ? "Start tracking expenses securely with Firebase Auth."
+                : "Sign in to view and manage your expenses."}
+            </p>
           </div>
           {checkingAuth ? (
             <p className="panel__empty">Checking your session…</p>
+          ) : user && shouldRedirectToDashboard ? (
+            <p className="panel__empty">Signing you in…</p>
+          ) : user ? (
+            null
           ) : (
             <>
               <form className="form" onSubmit={handleSubmit} noValidate>
@@ -208,44 +199,32 @@ export default function LoginPage() {
                     required
                   />
                 </div>
-                <div className="form__actions">
-                  <button type="submit" className="button">
-                    {mode === "signup" ? "Create account" : "Sign in"}
-                  </button>
-                  <button
-                    type="button"
-                    className="button button--ghost"
-                    onClick={() => setMode((current) => (current === "signup" ? "signin" : "signup"))}
-                  >
-                    {mode === "signup" ? "Use existing account" : "Create a new account"}
-                  </button>
-                  <button
-                    type="button"
-                    className="button button--ghost"
-                    onClick={handleResetPassword}
-                  >
-                    Forgot password?
-                  </button>
-                </div>
+                <button type="submit" className="button button--full">
+                  {mode === "signup" ? "Create account" : "Sign in"}
+                </button>
+                <button type="button" className="button button--link" onClick={handleResetPassword}>
+                  Forgot password?
+                </button>
               </form>
 
               <div className="divider">
                 <span>OR</span>
               </div>
 
-              <div className="form__actions">
-                <button type="button" className="button" onClick={handleGoogleSignIn}>
-                  Continue with Google
-                </button>
+              <button type="button" className="button button--full" onClick={handleGoogleSignIn}>
+                Continue with Google
+              </button>
+
+              <p className="panel__swap">
+                {mode === "signup" ? "Already have an account?" : "New here?"}{" "}
                 <button
                   type="button"
-                  className="button button--ghost"
-                  onClick={handleGoogleLink}
-                  disabled={!user || hasGoogleLinked}
+                  className="button button--link"
+                  onClick={() => setMode((current) => (current === "signup" ? "signin" : "signup"))}
                 >
-                  {hasGoogleLinked ? "Google already linked" : "Link Google to this account"}
+                  {mode === "signup" ? "Sign in" : "Create one"}
                 </button>
-              </div>
+              </p>
 
               {status ? <p className="form__success">{status}</p> : null}
               {error ? (
@@ -253,19 +232,6 @@ export default function LoginPage() {
                   {error}
                 </p>
               ) : null}
-
-              <p className="panel__hint">
-                {user ? (
-                  <>
-                    Signed in as <strong>{user.email ?? user.uid}</strong>.{" "}
-                    <Link href="/">Back to expenses.</Link>
-                  </>
-                ) : (
-                  <>
-                    Finished authenticating? <Link href="/">Go to your expenses.</Link>
-                  </>
-                )}
-              </p>
             </>
           )}
         </section>

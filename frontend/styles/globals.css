@@ -35,6 +35,13 @@ body {
   margin: 0 auto;
 }
 
+.page--auth {
+  max-width: 460px;
+  min-height: 100vh;
+  justify-content: center;
+  padding: 4rem 1rem;
+}
+
 .panel {
   background: var(--panel-bg);
   border: 1px solid var(--border-subtle);
@@ -43,9 +50,21 @@ body {
   box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
 }
 
+.panel--auth {
+  width: 100%;
+  padding: 2.5rem 2rem;
+}
+
 .panel__title {
   font-size: 1.5rem;
   margin-bottom: 1.25rem;
+}
+
+.panel__header--stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
 }
 
 .panel__header {
@@ -54,6 +73,16 @@ body {
   align-items: baseline;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.panel__subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.panel__subtitle--spacing {
+  margin-bottom: 1.5rem;
 }
 
 .panel__total {
@@ -120,6 +149,11 @@ body {
   transition: background-color 0.2s ease-in-out, transform 0.1s ease;
 }
 
+.button.button--full {
+  width: 100%;
+  justify-content: center;
+}
+
 .button[disabled] {
   cursor: not-allowed;
   opacity: 0.6;
@@ -150,6 +184,19 @@ body {
 .button.button--ghost:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.button.button--link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+}
+
+.button.button--link:hover {
+  text-decoration: underline;
 }
 
 .form__error {
@@ -232,4 +279,10 @@ body {
 .panel__hint a {
   color: var(--accent);
   font-weight: 600;
+}
+
+.panel__swap {
+  margin: 1.5rem 0 0;
+  font-size: 0.95rem;
+  color: var(--text-muted);
 }
