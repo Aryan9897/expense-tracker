@@ -1,0 +1,46 @@
+# Dependencies & builds
+node_modules/
+dist/
+build/
+coverage/
+
+# Python env/cache
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Environment & secrets (keep secrets out of git)
+.env
+.env.*.local
+*.env
+.env.example
+*.pem
+*.key
+*.p12
+*.crt
+*.cer
+*.der
+*.csr
+*.jks
+*.pfx
+.credentials/
+
+# Cloud/tooling output
+.aws-sam/
+.cdk.out/
+.serverless/
+.sst/
+tmp/
+
+# IDE/OS noise
+.vscode/
+.DS_Store
+Thumbs.db
