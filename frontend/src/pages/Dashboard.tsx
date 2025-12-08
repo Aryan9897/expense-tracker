@@ -1,6 +1,7 @@
 import { StatCard } from '../components/StatCard';
 import { computeTotals, sampleExpenses } from '../lib/sampleData';
 import { ExpenseTotals } from '../types/expense';
+import styles from './Dashboard.module.css';
 
 type DashboardProps = {
   email: string;
@@ -11,15 +12,15 @@ export function Dashboard({ email, onSignOut }: DashboardProps) {
   const totals: ExpenseTotals = computeTotals(sampleExpenses);
 
   return (
-    <div className="page">
-      <header className="topbar">
+    <div className={styles.page}>
+      <header className={styles.topbar}>
         <div>
           <p className="muted small">Dashboard</p>
           <h2>Welcome back</h2>
         </div>
-        <div className="topbar-actions">
-          <div className="avatar">{email.charAt(0).toUpperCase()}</div>
-          <div className="user-info">
+        <div className={styles.topbarActions}>
+          <div className={styles.avatar}>{email.charAt(0).toUpperCase()}</div>
+          <div className={styles.userInfo}>
             <strong>{email}</strong>
             <span className="muted small">Personal workspace</span>
           </div>
@@ -29,22 +30,22 @@ export function Dashboard({ email, onSignOut }: DashboardProps) {
         </div>
       </header>
 
-      <section className="stats-grid">
+      <section className={styles.statsGrid}>
         <StatCard title="Total spent" value={`$${totals.spent.toFixed(2)}`} accent="primary" />
         <StatCard title="Pending review" value={`$${totals.pending.toFixed(2)}`} accent="amber" />
         <StatCard title="Receipts this week" value={`${totals.receiptCount}`} accent="green" />
       </section>
 
-      <section className="panels">
-        <div className="panel">
-          <div className="panel-head">
+      <section className={styles.panels}>
+        <div className={styles.panel}>
+          <div className={styles.panelHead}>
             <div>
               <p className="muted small">Quick add</p>
               <h3>Manual expense</h3>
             </div>
             <button className="primary-btn subtle">Save</button>
           </div>
-          <form className="inline-form">
+          <form className={styles.inlineForm}>
             <label>
               <span>Merchant</span>
               <input placeholder="e.g., Starbucks" />
@@ -69,15 +70,15 @@ export function Dashboard({ email, onSignOut }: DashboardProps) {
           </form>
         </div>
 
-        <div className="panel">
-          <div className="panel-head">
+        <div className={styles.panel}>
+          <div className={styles.panelHead}>
             <div>
               <p className="muted small">Upload</p>
               <h3>Receipt ingestion</h3>
             </div>
             <button className="ghost-btn subtle">Upload</button>
           </div>
-          <div className="dropzone">
+          <div className={styles.dropzone}>
             <p>Drop receipts here or click upload.</p>
             <p className="muted small">
               AI will extract total, date, and merchant automatically.
@@ -86,16 +87,16 @@ export function Dashboard({ email, onSignOut }: DashboardProps) {
         </div>
       </section>
 
-      <section className="panel">
-        <div className="panel-head">
+      <section className={styles.panel}>
+        <div className={styles.panelHead}>
           <div>
             <p className="muted small">Activity</p>
             <h3>Recent expenses</h3>
           </div>
           <div className="pill neutral">Demo data</div>
         </div>
-        <div className="table">
-          <div className="table-head">
+        <div className={styles.table}>
+          <div className={styles.tableHead}>
             <span>Merchant</span>
             <span>Category</span>
             <span>Status</span>
@@ -104,16 +105,20 @@ export function Dashboard({ email, onSignOut }: DashboardProps) {
             <span>Date</span>
           </div>
           {sampleExpenses.map((expense) => (
-            <div className="table-row" key={expense.id}>
+            <div className={styles.tableRow} key={expense.id}>
               <span>{expense.merchant}</span>
               <span className="muted">{expense.category}</span>
               <span>
-                <span className={`pill ${expense.status === 'cleared' ? 'success' : 'neutral'}`}>
+                <span
+                  className={`${styles.pill} ${
+                    expense.status === 'cleared' ? styles.success : styles.neutral
+                  }`}
+                >
                   {expense.status === 'cleared' ? 'Cleared' : 'Pending'}
                 </span>
               </span>
               <span className="muted">{expense.source === 'receipt' ? 'Receipt' : 'Manual'}</span>
-              <span className="amount">${expense.amount.toFixed(2)}</span>
+              <span className={styles.amount}>${expense.amount.toFixed(2)}</span>
               <span className="muted">{expense.date}</span>
             </div>
           ))}

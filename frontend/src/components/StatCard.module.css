@@ -1,0 +1,23 @@
+.card {
+  background: var(--surface);
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.card h3 {
+  margin: 6px 0 0;
+}
+
+.accentPrimary {
+  border-color: rgba(37, 99, 235, 0.2);
+}
+
+.accentAmber {
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.accentGreen {
+  border-color: rgba(16, 185, 129, 0.2);
+}
