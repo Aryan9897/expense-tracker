@@ -18,21 +18,50 @@
   gap: 10px;
 }
 
-.avatar {
+.userMenuWrap {
+  position: relative;
+}
+
+.avatarButton {
   width: 44px;
   height: 44px;
   border-radius: 50%;
+  border: none;
   background: var(--primary);
   color: white;
   display: grid;
   place-items: center;
   font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow);
 }
 
-.userInfo {
+.userMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  min-width: 160px;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.menuItem {
+  padding: 10px 12px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.menuItem:hover {
+  background: #f1f5f9;
 }
 
 .statsGrid {
@@ -106,9 +135,10 @@
 .tableHead,
 .tableRow {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 0.9fr 0.8fr 0.8fr 1fr;
+  grid-template-columns: 1.2fr 1fr 0.9fr 0.8fr 0.8fr 1fr 0.35fr;
   gap: 10px;
   align-items: center;
+  padding: 0 8px;
 }
 
 .tableHead {
@@ -119,12 +149,61 @@
 }
 
 .tableRow {
-  padding: 10px 0;
+  padding: 10px 8px;
   border-top: 1px solid #e2e8f0;
 }
 
 .amount {
   font-weight: 700;
+}
+
+.actionCell {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.deleteBtn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #ef4444;
+  border-radius: 10px;
+  background: transparent;
+  color: #ef4444;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.deleteBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.deleteBtn:hover {
+  background: #fef2f2;
+}
+
+.deleteBtn::after {
+  content: 'Remove expense';
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  font-size: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease-in-out;
+}
+
+.deleteBtn:hover::after {
+  opacity: 1;
 }
 
 .pill {

@@ -1,7 +1,11 @@
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { StatCard } from '../components/StatCard';
 import { computeTotals, sampleExpenses } from '../lib/sampleData';
-import { ExpenseTotals } from '../types/expense';
+import { Expense, ExpenseTotals } from '../types/expense';
 import styles from './Dashboard.module.css';
+
+const sortByDateDesc = (list: Expense[]) =>
+  [...list].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 type DashboardProps = {
   email: string;
@@ -9,7 +13,49 @@ type DashboardProps = {
 };
 
 export function Dashboard({ email, onSignOut }: DashboardProps) {
-  const totals: ExpenseTotals = computeTotals(sampleExpenses);
+  const [expenses, setExpenses] = useState(() => sortByDateDesc(sampleExpenses));
+  const [form, setForm] = useState({
+    merchant: '',
+    category: 'Groceries',
+    amount: '',
+    date: ''
+  });
+  const totals: ExpenseTotals = computeTotals(expenses);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const handleRemove = (id: string) => {
+    setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+  };
+
+  const handleAdd = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const amountValue = Number(form.amount);
+    if (!form.merchant.trim() || !form.date || Number.isNaN(amountValue)) return;
+
+    const newExpense: Expense = {
+      id: `exp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      merchant: form.merchant.trim(),
+      category: form.category,
+      amount: amountValue,
+      date: form.date,
+      status: 'pending',
+      source: 'manual'
+    };
+
+    setExpenses((prev) => sortByDateDesc([newExpense, ...prev]));
+    setForm({ merchant: '', category: 'Groceries', amount: '', date: '' });
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <div className={styles.page}>
@@ -19,14 +65,36 @@ export function Dashboard({ email, onSignOut }: DashboardProps) {
           <h2>Welcome back</h2>
         </div>
         <div className={styles.topbarActions}>
-          <div className={styles.avatar}>{email.charAt(0).toUpperCase()}</div>
-          <div className={styles.userInfo}>
-            <strong>{email}</strong>
-            <span className="muted small">Personal workspace</span>
+          <div className={styles.userMenuWrap} ref={menuRef}>
+            <button
+              type="button"
+              className={styles.avatarButton}
+              onClick={() => setMenuOpen((open) => !open)}
+              aria-haspopup="true"
+              aria-expanded={menuOpen}
+              aria-label="Open profile menu"
+            >
+              {email.charAt(0).toUpperCase()}
+            </button>
+            {menuOpen && (
+              <div className={styles.userMenu} role="menu">
+                <button type="button" className={styles.menuItem} role="menuitem">
+                  Profile
+                </button>
+                <button type="button" className={styles.menuItem} role="menuitem">
+                  Settings
+                </button>
+                <button
+                  type="button"
+                  className={styles.menuItem}
+                  role="menuitem"
+                  onClick={onSignOut}
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
           </div>
-          <button className="ghost-btn" onClick={onSignOut}>
-            Sign out
-          </button>
         </div>
       </header>
 
@@ -43,16 +111,26 @@ export function Dashboard({ email, onSignOut }: DashboardProps) {
               <p className="muted small">Quick add</p>
               <h3>Manual expense</h3>
             </div>
-            <button className="primary-btn subtle">Save</button>
+            <button className="primary-btn subtle" type="submit" form="manual-expense-form">
+              Add
+            </button>
           </div>
-          <form className={styles.inlineForm}>
+          <form id="manual-expense-form" className={styles.inlineForm} onSubmit={handleAdd}>
             <label>
               <span>Merchant</span>
-              <input placeholder="e.g., Starbucks" />
+              <input
+                placeholder="e.g., Starbucks"
+                value={form.merchant}
+                onChange={(e) => setForm((prev) => ({ ...prev, merchant: e.target.value }))}
+                required
+              />
             </label>
             <label>
               <span>Category</span>
-              <select defaultValue="Groceries">
+              <select
+                value={form.category}
+                onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
+              >
                 <option>Groceries</option>
                 <option>Transport</option>
                 <option>Dining</option>
@@ -61,11 +139,24 @@ export function Dashboard({ email, onSignOut }: DashboardProps) {
             </label>
             <label>
               <span>Amount</span>
-              <input type="number" min={0} step={0.01} placeholder="0.00" />
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                placeholder="0.00"
+                value={form.amount}
+                onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
+                required
+              />
             </label>
             <label>
               <span>Date</span>
-              <input type="date" />
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
+                required
+              />
             </label>
           </form>
         </div>
@@ -103,8 +194,9 @@ export function Dashboard({ email, onSignOut }: DashboardProps) {
             <span>Source</span>
             <span>Amount</span>
             <span>Date</span>
+            <span aria-hidden="true" />
           </div>
-          {sampleExpenses.map((expense) => (
+          {expenses.map((expense) => (
             <div className={styles.tableRow} key={expense.id}>
               <span>{expense.merchant}</span>
               <span className="muted">{expense.category}</span>
@@ -120,6 +212,31 @@ export function Dashboard({ email, onSignOut }: DashboardProps) {
               <span className="muted">{expense.source === 'receipt' ? 'Receipt' : 'Manual'}</span>
               <span className={styles.amount}>${expense.amount.toFixed(2)}</span>
               <span className="muted">{expense.date}</span>
+              <span className={styles.actionCell}>
+                <button
+                  type="button"
+                  className={styles.deleteBtn}
+                  onClick={() => handleRemove(expense.id)}
+                  aria-label="Remove expense"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                    <path d="M5 6l1 14a1 1 0 0 0 1 .9h10a1 1 0 0 0 1-.9L19 6" />
+                  </svg>
+                </button>
+              </span>
             </div>
           ))}
         </div>
