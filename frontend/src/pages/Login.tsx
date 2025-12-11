@@ -18,9 +18,10 @@ type LoginProps = {
   email: string;
   onEmailChange: (value: string) => void;
   onSubmit: () => void;
+  onSignup: () => void;
 };
 
-export function Login({ email, onEmailChange, onSubmit }: LoginProps) {
+export function Login({ email, onEmailChange, onSubmit, onSignup }: LoginProps) {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
   const [googleReady, setGoogleReady] = useState(false);
@@ -123,6 +124,18 @@ export function Login({ email, onEmailChange, onSubmit }: LoginProps) {
           <button className="primary-btn" type="submit">
             Continue
           </button>
+          <p className={styles.signupText}>
+            New user?{' '}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                onSignup();
+              }}
+            >
+              Click here to sign up
+            </a>
+          </p>
           <div ref={googleButtonRef} className={styles.googleBtnContainer}>
             {!googleReady && (
               <button className="gsi-material-button" type="button">

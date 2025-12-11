@@ -10,9 +10,10 @@ const sortByDateDesc = (list: Expense[]) =>
 type DashboardProps = {
   email: string;
   onSignOut: () => void;
+  onOpenProfile: () => void;
 };
 
-export function Dashboard({ email, onSignOut }: DashboardProps) {
+export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
   const [expenses, setExpenses] = useState(() => sortByDateDesc(sampleExpenses));
   const [form, setForm] = useState({
     merchant: '',
@@ -78,11 +79,16 @@ export function Dashboard({ email, onSignOut }: DashboardProps) {
             </button>
             {menuOpen && (
               <div className={styles.userMenu} role="menu">
-                <button type="button" className={styles.menuItem} role="menuitem">
+                <button
+                  type="button"
+                  className={styles.menuItem}
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onOpenProfile();
+                  }}
+                >
                   Profile
-                </button>
-                <button type="button" className={styles.menuItem} role="menuitem">
-                  Settings
                 </button>
                 <button
                   type="button"
@@ -101,7 +107,6 @@ export function Dashboard({ email, onSignOut }: DashboardProps) {
       <section className={styles.statsGrid}>
         <StatCard title="Total spent" value={`$${totals.spent.toFixed(2)}`} accent="primary" />
         <StatCard title="Pending review" value={`$${totals.pending.toFixed(2)}`} accent="amber" />
-        <StatCard title="Receipts this week" value={`${totals.receiptCount}`} accent="green" />
       </section>
 
       <section className={styles.panels}>

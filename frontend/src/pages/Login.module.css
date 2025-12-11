@@ -112,6 +112,20 @@
   gap: 8px;
 }
 
+.signupText {
+  text-align: center;
+  font-size: 14px;
+}
+
+.signupText a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.signupText a:hover {
+  text-decoration: underline;
+}
+
 .googleBtnContainer {
   display: flex;
   justify-content: center;
