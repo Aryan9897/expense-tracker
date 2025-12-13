@@ -1,0 +1,45 @@
+# Root ignore rules (keep secrets and noise out of git)
+
+# Environments & credentials
+.env
+.env.*
+*.env
+.credentials/
+*.pem
+*.key
+*.p12
+*.crt
+*.cer
+*.der
+*.csr
+*.jks
+*.pfx
+.firebase/
+firebase-debug.log
+
+# Dependencies & build outputs
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+*.lcov
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Tooling/cache
+.aws-sam/
+.cdk.out/
+.serverless/
+.sst/
+tmp/
+
+# IDE/OS noise
+.vscode/
+.DS_Store
+Thumbs.db

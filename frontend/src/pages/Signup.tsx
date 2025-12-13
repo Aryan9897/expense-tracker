@@ -15,19 +15,28 @@ type SignupData = {
 
 type SignupProps = {
   initial: SignupData;
-  onSubmit: (data: SignupData) => void;
+  onSubmit: (data: SignupData) => Promise<void>;
   onCancel: () => void;
+  isSubmitting?: boolean;
+  error?: string | null;
 };
 
-export function Signup({ initial, onSubmit, onCancel }: SignupProps) {
+export function Signup({ initial, onSubmit, onCancel, isSubmitting, error }: SignupProps) {
   const [form, setForm] = useState(initial);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setLocalError(null);
     if (!form.firstName.trim() || !form.email.trim() || !form.password || !form.confirmPassword) {
+      setLocalError('Please complete all required fields.');
       return;
     }
-    onSubmit({
+    if (form.password !== form.confirmPassword) {
+      setLocalError('Passwords must match.');
+      return;
+    }
+    await onSubmit({
       ...form,
       firstName: form.firstName.trim(),
       email: form.email.trim()
@@ -46,8 +55,8 @@ export function Signup({ initial, onSubmit, onCancel }: SignupProps) {
             <button className="ghost-btn" type="button" onClick={onCancel}>
               Back
             </button>
-            <button className="primary-btn" type="submit" form="signup-form">
-              Sign up
+            <button className="primary-btn" type="submit" form="signup-form" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating account…' : 'Sign up'}
             </button>
           </div>
         </div>
@@ -171,6 +180,11 @@ export function Signup({ initial, onSubmit, onCancel }: SignupProps) {
               />
             </div>
           </div>
+          {(error || localError) && (
+            <p className="error" role="alert">
+              {localError || error}
+            </p>
+          )}
         </form>
       </div>
     </div>
