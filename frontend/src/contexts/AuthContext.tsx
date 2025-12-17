@@ -6,7 +6,12 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
-  updateProfile
+  updateProfile,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+  updateEmail,
+  sendEmailVerification
 } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 
@@ -17,6 +22,8 @@ type AuthContextValue = {
   signupWithEmail: (email: string, password: string, displayName?: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
+  updateUserEmail: (newEmail: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -52,6 +59,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
   }, []);
 
+  const changePassword = useCallback(
+    async (oldPassword: string, newPassword: string) => {
+      if (!auth.currentUser || !auth.currentUser.email) {
+        throw new Error('No user logged in');
+      }
+
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, oldPassword);
+
+      // 1. Re-authenticate
+      await reauthenticateWithCredential(auth.currentUser, credential);
+
+      // 2. Update password
+      await updatePassword(auth.currentUser, newPassword);
+    },
+    []
+  );
+
+  const updateUserEmail = useCallback(async (newEmail: string) => {
+    if (!auth.currentUser) throw new Error('No user logged in');
+    await updateEmail(auth.currentUser, newEmail);
+    await sendEmailVerification(auth.currentUser);
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -59,9 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loginWithEmail,
       signupWithEmail,
       loginWithGoogle,
-      logout
+      logout,
+      changePassword,
+      updateUserEmail
     }),
-    [user, loading, loginWithEmail, signupWithEmail, loginWithGoogle, logout]
+    [user, loading, loginWithEmail, signupWithEmail, loginWithGoogle, logout, changePassword, updateUserEmail]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

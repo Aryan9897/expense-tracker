@@ -15,16 +15,13 @@ type ProfileProps = {
   profile: ProfileData;
   onSave: (data: ProfileData) => void;
   onCancel: () => void;
-  onChangePassword?: (oldPassword: string, newPassword: string, confirmPassword: string) => void;
+  onChangePassword: () => void;
+  isSaving?: boolean;
+  isGoogleUser?: boolean;
 };
 
-export function Profile({ profile, onSave, onCancel, onChangePassword }: ProfileProps) {
+export function Profile({ profile, onSave, onCancel, onChangePassword, isSaving, isGoogleUser }: ProfileProps) {
   const [form, setForm] = useState(profile);
-  const [passwords, setPasswords] = useState({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
 
   useEffect(() => setForm(profile), [profile]);
 
@@ -32,19 +29,7 @@ export function Profile({ profile, onSave, onCancel, onChangePassword }: Profile
     event.preventDefault();
     if (!form.email.trim()) return;
 
-    const wantsPasswordChange =
-      passwords.oldPassword.trim() || passwords.newPassword.trim() || passwords.confirmPassword;
-
-    if (wantsPasswordChange) {
-      if (!passwords.oldPassword || !passwords.newPassword || !passwords.confirmPassword) return;
-      if (passwords.newPassword !== passwords.confirmPassword) return;
-    }
-
     onSave({ ...form, email: form.email.trim() });
-    if (wantsPasswordChange && onChangePassword) {
-      onChangePassword(passwords.oldPassword, passwords.newPassword, passwords.confirmPassword);
-      setPasswords({ oldPassword: '', newPassword: '', confirmPassword: '' });
-    }
   };
 
   return (
@@ -58,8 +43,13 @@ export function Profile({ profile, onSave, onCancel, onChangePassword }: Profile
           <button className="ghost-btn" type="button" onClick={onCancel}>
             Back
           </button>
-          <button className="primary-btn" type="submit" form="profile-form">
-            Save changes
+          {!isGoogleUser && (
+            <button className="ghost-btn" type="button" onClick={onChangePassword}>
+              Change password
+            </button>
+          )}
+          <button className="primary-btn" type="submit" form="profile-form" disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save changes'}
           </button>
         </div>
       </div>
@@ -112,6 +102,9 @@ export function Profile({ profile, onSave, onCancel, onChangePassword }: Profile
                 value={form.email}
                 onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
                 placeholder="you@example.com"
+                readOnly
+                disabled
+                title="Email cannot be changed"
               />
             </div>
             <div className={styles.field}>
@@ -156,55 +149,6 @@ export function Profile({ profile, onSave, onCancel, onChangePassword }: Profile
             <p className={styles.helper}>Optional context like contact preference or team.</p>
           </div>
 
-          <div className={styles.grid}>
-            <div className={styles.field}>
-              <label htmlFor="oldPassword">
-                Old password
-                <span className={styles.required} aria-hidden="true">
-                  *
-                </span>
-              </label>
-              <input
-                id="oldPassword"
-                type="password"
-                value={passwords.oldPassword}
-                onChange={(e) => setPasswords((prev) => ({ ...prev, oldPassword: e.target.value }))}
-                placeholder="Current password"
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="newPassword">
-                New password
-                <span className={styles.required} aria-hidden="true">
-                  *
-                </span>
-              </label>
-              <input
-                id="newPassword"
-                type="password"
-                value={passwords.newPassword}
-                onChange={(e) => setPasswords((prev) => ({ ...prev, newPassword: e.target.value }))}
-                placeholder="New password"
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="confirmPassword">
-                Re-enter new password
-                <span className={styles.required} aria-hidden="true">
-                  *
-                </span>
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={passwords.confirmPassword}
-                onChange={(e) =>
-                  setPasswords((prev) => ({ ...prev, confirmPassword: e.target.value }))
-                }
-                placeholder="Confirm new password"
-              />
-            </div>
-          </div>
         </form>
       </div>
     </div>
