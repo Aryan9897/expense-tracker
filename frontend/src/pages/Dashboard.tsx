@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { StatCard } from '../components/StatCard';
-import { computeTotals, sampleExpenses } from '../lib/sampleData';
+import { Modal } from '../components/Modal';
+import { computeTotals } from '../lib/sampleData';
 import { Expense, ExpenseTotals } from '../types/expense';
 import styles from './Dashboard.module.css';
 
@@ -14,14 +15,19 @@ type DashboardProps = {
 };
 
 export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
-  const [expenses, setExpenses] = useState(() => sortByDateDesc(sampleExpenses));
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [form, setForm] = useState({
     merchant: '',
     category: 'Groceries',
     amount: '',
-    date: ''
+    date: '',
+    status: 'pending',
+    customCategory: ''
   });
+  const [categories, setCategories] = useState(['Groceries', 'Transport', 'Software', 'Coffee']);
   const totals: ExpenseTotals = computeTotals(expenses);
+  const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -34,18 +40,50 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
     const amountValue = Number(form.amount);
     if (!form.merchant.trim() || !form.date || Number.isNaN(amountValue)) return;
 
+    let finalCategory = form.category;
+    if (form.category === 'create-new') {
+      if (!form.customCategory.trim()) return;
+      finalCategory = form.customCategory.trim();
+      setCategories((prev) => [...prev, finalCategory]);
+    }
+
     const newExpense: Expense = {
       id: `exp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       merchant: form.merchant.trim(),
-      category: form.category,
+      category: finalCategory,
       amount: amountValue,
       date: form.date,
-      status: 'pending',
+      status: form.status as 'cleared' | 'pending',
       source: 'manual'
     };
 
     setExpenses((prev) => sortByDateDesc([newExpense, ...prev]));
-    setForm({ merchant: '', category: 'Groceries', amount: '', date: '' });
+    setExpenses((prev) => sortByDateDesc([newExpense, ...prev]));
+    handleCloseModal();
+  };
+
+  const handleCloseModal = () => {
+    setForm({ merchant: '', category: 'Groceries', amount: '', date: '', status: 'pending', customCategory: '' });
+    setIsAddExpenseModalOpen(false);
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Handle file upload logic here
+      console.log('File selected:', file);
+      // For now just simulate adding an expense from receipt
+      const newExpense: Expense = {
+        id: `exp-${Date.now()}`,
+        merchant: 'Receipt Upload',
+        category: 'Uncategorized',
+        amount: 0,
+        date: new Date().toISOString().split('T')[0],
+        status: 'pending',
+        source: 'receipt'
+      };
+      setExpenses((prev) => sortByDateDesc([newExpense, ...prev]));
+    }
   };
 
   useEffect(() => {
@@ -109,79 +147,7 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
         <StatCard title="Pending review" value={`$${totals.pending.toFixed(2)}`} accent="amber" />
       </section>
 
-      <section className={styles.panels}>
-        <div className={styles.panel}>
-          <div className={styles.panelHead}>
-            <div>
-              <p className="muted small">Quick add</p>
-              <h3>Manual expense</h3>
-            </div>
-            <button className="primary-btn subtle" type="submit" form="manual-expense-form">
-              Add
-            </button>
-          </div>
-          <form id="manual-expense-form" className={styles.inlineForm} onSubmit={handleAdd}>
-            <label>
-              <span>Merchant</span>
-              <input
-                placeholder="e.g., Starbucks"
-                value={form.merchant}
-                onChange={(e) => setForm((prev) => ({ ...prev, merchant: e.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              <span>Category</span>
-              <select
-                value={form.category}
-                onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
-              >
-                <option>Groceries</option>
-                <option>Transport</option>
-                <option>Dining</option>
-                <option>Software</option>
-              </select>
-            </label>
-            <label>
-              <span>Amount</span>
-              <input
-                type="number"
-                min={0}
-                step={0.01}
-                placeholder="0.00"
-                value={form.amount}
-                onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              <span>Date</span>
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
-                required
-              />
-            </label>
-          </form>
-        </div>
 
-        <div className={styles.panel}>
-          <div className={styles.panelHead}>
-            <div>
-              <p className="muted small">Upload</p>
-              <h3>Receipt ingestion</h3>
-            </div>
-            <button className="ghost-btn subtle">Upload</button>
-          </div>
-          <div className={styles.dropzone}>
-            <p>Drop receipts here or click upload.</p>
-            <p className="muted small">
-              AI will extract total, date, and merchant automatically.
-            </p>
-          </div>
-        </div>
-      </section>
 
       <section className={styles.panel}>
         <div className={styles.panelHead}>
@@ -189,7 +155,28 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
             <p className="muted small">Activity</p>
             <h3>Recent expenses</h3>
           </div>
-          <div className="pill neutral">Demo data</div>
+          <div className={styles.headerActions}>
+            <button
+              className="primary-btn small"
+              onClick={() => setIsAddExpenseModalOpen(true)}
+            >
+              Add expense
+            </button>
+            <button
+              className="ghost-btn small"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Upload receipt
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className={styles.hiddenInput}
+              accept="image/*,.pdf"
+              onChange={handleFileSelect}
+              aria-hidden="true"
+            />
+          </div>
         </div>
         <div className={styles.table}>
           <div className={styles.tableHead}>
@@ -201,51 +188,142 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
             <span>Date</span>
             <span aria-hidden="true" />
           </div>
-          {expenses.map((expense) => (
-            <div className={styles.tableRow} key={expense.id}>
-              <span>{expense.merchant}</span>
-              <span className="muted">{expense.category}</span>
-              <span>
-                <span
-                  className={`${styles.pill} ${
-                    expense.status === 'cleared' ? styles.success : styles.neutral
-                  }`}
-                >
-                  {expense.status === 'cleared' ? 'Cleared' : 'Pending'}
-                </span>
-              </span>
-              <span className="muted">{expense.source === 'receipt' ? 'Receipt' : 'Manual'}</span>
-              <span className={styles.amount}>${expense.amount.toFixed(2)}</span>
-              <span className="muted">{expense.date}</span>
-              <span className={styles.actionCell}>
-                <button
-                  type="button"
-                  className={styles.deleteBtn}
-                  onClick={() => handleRemove(expense.id)}
-                  aria-label="Remove expense"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M3 6h18" />
-                    <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
-                    <path d="M10 11v6" />
-                    <path d="M14 11v6" />
-                    <path d="M5 6l1 14a1 1 0 0 0 1 .9h10a1 1 0 0 0 1-.9L19 6" />
-                  </svg>
-                </button>
-              </span>
+          {expenses.length === 0 ? (
+            <div className={styles.emptyState}>
+              <p className="muted">No activity, get started by adding your expenses</p>
             </div>
-          ))}
+          ) : (
+            expenses.map((expense) => (
+              <div className={styles.tableRow} key={expense.id}>
+                <span>{expense.merchant}</span>
+                <span className="muted">{expense.category}</span>
+                <span>
+                  <span
+                    className={`${styles.pill} ${expense.status === 'cleared' ? styles.success : styles.neutral
+                      }`}
+                  >
+                    {expense.status === 'cleared' ? 'Cleared' : 'Pending'}
+                  </span>
+                </span>
+                <span className="muted">{expense.source === 'receipt' ? 'Receipt' : 'Manual'}</span>
+                <span className={styles.amount}>${expense.amount.toFixed(2)}</span>
+                <span className="muted">{expense.date}</span>
+                <span className={styles.actionCell}>
+                  <button
+                    type="button"
+                    className={styles.deleteBtn}
+                    onClick={() => handleRemove(expense.id)}
+                    aria-label="Remove expense"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                      <path d="M10 11v6" />
+                      <path d="M14 11v6" />
+                      <path d="M5 6l1 14a1 1 0 0 0 1 .9h10a1 1 0 0 0 1-.9L19 6" />
+                    </svg>
+                  </button>
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </section>
+
+      <Modal
+        isOpen={isAddExpenseModalOpen}
+        onClose={handleCloseModal}
+        title="Add Expense"
+      >
+        <form onSubmit={handleAdd} className={styles.modalForm}>
+          <label>
+            <span>Merchant</span>
+            <input
+              placeholder="e.g., Starbucks"
+              value={form.merchant}
+              onChange={(e) => setForm((prev) => ({ ...prev, merchant: e.target.value }))}
+              required
+              autoFocus
+            />
+          </label>
+          <label>
+            <span>Category</span>
+            <select
+              value={form.category}
+              onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+              <option value="create-new">Create new...</option>
+            </select>
+          </label>
+          {form.category === 'create-new' && (
+            <label>
+              <span>New Category Name</span>
+              <input
+                placeholder="e.g., Gym"
+                value={form.customCategory}
+                onChange={(e) => setForm((prev) => ({ ...prev, customCategory: e.target.value }))}
+                required
+                autoFocus
+              />
+            </label>
+          )}
+          <label>
+            <span>Status</span>
+            <select
+              value={form.status}
+              onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
+            >
+              <option value="pending">Pending</option>
+              <option value="cleared">Cleared</option>
+            </select>
+          </label>
+          <label>
+            <span>Amount</span>
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              placeholder="0.00"
+              value={form.amount}
+              onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
+              required
+            />
+          </label>
+          <label>
+            <span>Date</span>
+            <input
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
+              required
+            />
+          </label>
+          <div className={styles.modalActions}>
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={handleCloseModal}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="primary-btn">
+              Add Expense
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
