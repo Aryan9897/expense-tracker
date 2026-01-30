@@ -1,0 +1,266 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Expense Tracker MVP (SAM)
+
+Parameters:
+  ReceiptBucketName:
+    Type: String
+    Description: "Globally unique S3 bucket name for receipt uploads"
+  ExpenseTableName:
+    Type: String
+    Default: Expenses
+    Description: "DynamoDB table name for expenses"
+  UploadPrefix:
+    Type: String
+    Default: uploads/
+    Description: "S3 prefix for receipt uploads"
+  MaxLambdaConcurrency:
+    Type: Number
+    Default: 2
+    Description: "Cost guardrail: max concurrent executions per Lambda"
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Architectures:
+      - x86_64
+    Timeout: 15
+    MemorySize: 256
+    Tracing: PassThrough
+    Environment:
+      Variables:
+        LOG_LEVEL: info
+
+Resources:
+  ExpensesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref ExpenseTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: expenseId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: expenseId
+          KeyType: RANGE
+
+  ReceiptBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref ReceiptBucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldReceipts
+            Status: Enabled
+            Prefix: !Ref UploadPrefix
+            ExpirationInDays: 30
+          - Id: AbortMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowOrigins:
+          - "*"
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+
+  CreateExpenseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: services/expenses/createExpense.handler
+      ReservedConcurrentExecutions: !Ref MaxLambdaConcurrency
+      Environment:
+        Variables:
+          EXPENSES_TABLE: !Ref ExpensesTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt ExpensesTable.Arn
+      Events:
+        CreateExpense:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /expense
+            Method: POST
+
+  ListExpensesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: services/expenses/listExpenses.handler
+      ReservedConcurrentExecutions: !Ref MaxLambdaConcurrency
+      Environment:
+        Variables:
+          EXPENSES_TABLE: !Ref ExpensesTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ExpensesTable
+      Events:
+        ListExpenses:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /expenses
+            Method: GET
+
+  GenerateUploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: services/receipts/generateUploadUrl.handler
+      ReservedConcurrentExecutions: !Ref MaxLambdaConcurrency
+      Environment:
+        Variables:
+          RECEIPT_BUCKET: !Ref ReceiptBucket
+          UPLOAD_PREFIX: !Ref UploadPrefix
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource: !Sub "arn:aws:s3:::${ReceiptBucket}/${UploadPrefix}*"
+      Events:
+        UploadUrl:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /receipt/upload
+            Method: POST
+
+  ProcessReceiptFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: services/receipts/processReceipt.handler
+      ReservedConcurrentExecutions: !Ref MaxLambdaConcurrency
+      Environment:
+        Variables:
+          RECEIPT_BUCKET: !Ref ReceiptBucket
+          EXPENSES_TABLE: !Ref ExpensesTable
+          UPLOAD_PREFIX: !Ref UploadPrefix
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt ExpensesTable.Arn
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: !Sub "arn:aws:s3:::${ReceiptBucket}/${UploadPrefix}*"
+            - Effect: Allow
+              Action:
+                - textract:AnalyzeExpense
+                - textract:AnalyzeDocument
+                - textract:DetectDocumentText
+              Resource: "*"
+
+  ReceiptBucketToTextractPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt ProcessReceiptFunction.Arn
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub "arn:aws:s3:::${ReceiptBucket}"
+
+  ReceiptBucketNotification:
+    Type: AWS::S3::BucketNotification
+    Properties:
+      Bucket: !Ref ReceiptBucket
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: !Ref UploadPrefix
+            Function: !GetAtt ProcessReceiptFunction.Arn
+    DependsOn:
+      - ReceiptBucketToTextractPermission
+
+  AiQueryPlannerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: services/ai/aiQueryPlanner.handler
+      ReservedConcurrentExecutions: !Ref MaxLambdaConcurrency
+      Environment:
+        Variables:
+          EXPENSES_TABLE: !Ref ExpensesTable
+          OPENAI_API_KEY: ""
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ExpensesTable
+      Events:
+        AiQuery:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ai/query
+            Method: POST
+
+  CreateExpenseLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${CreateExpenseFunction}"
+      RetentionInDays: 7
+
+  ListExpensesLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ListExpensesFunction}"
+      RetentionInDays: 7
+
+  GenerateUploadUrlLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${GenerateUploadUrlFunction}"
+      RetentionInDays: 7
+
+  ProcessReceiptLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ProcessReceiptFunction}"
+      RetentionInDays: 7
+
+  AiQueryPlannerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AiQueryPlannerFunction}"
+      RetentionInDays: 7
+
+Outputs:
+  ApiUrl:
+    Description: "HTTP API base URL"
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  ExpensesTableName:
+    Value: !Ref ExpensesTable
+  ReceiptBucketName:
+    Value: !Ref ReceiptBucket
