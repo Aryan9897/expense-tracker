@@ -8,6 +8,8 @@ import styles from './Dashboard.module.css';
 const sortByDateDesc = (list: Expense[]) =>
   [...list].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 type DashboardProps = {
   email: string;
   onSignOut: () => void;
@@ -30,12 +32,13 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const userId = email;
 
   const handleRemove = (id: string) => {
     setExpenses((prev) => prev.filter((expense) => expense.id !== id));
   };
 
-  const handleAdd = (event: FormEvent<HTMLFormElement>) => {
+  const handleAdd = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const amountValue = Number(form.amount);
     if (!form.merchant.trim() || !form.date || Number.isNaN(amountValue)) return;
@@ -47,19 +50,47 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
       setCategories((prev) => [...prev, finalCategory]);
     }
 
-    const newExpense: Expense = {
-      id: `exp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      merchant: form.merchant.trim(),
-      category: finalCategory,
-      amount: amountValue,
-      date: form.date,
-      status: form.status as 'cleared' | 'pending',
-      source: 'manual'
-    };
+    if (!API_BASE_URL) {
+      console.error('VITE_API_BASE_URL is not set');
+      return;
+    }
 
-    setExpenses((prev) => sortByDateDesc([newExpense, ...prev]));
-    setExpenses((prev) => sortByDateDesc([newExpense, ...prev]));
-    handleCloseModal();
+    try {
+      const res = await fetch(`${API_BASE_URL}/expense`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          merchant: form.merchant.trim(),
+          category: finalCategory,
+          amount: amountValue,
+          date: form.date,
+          status: form.status,
+          source: 'manual'
+        })
+      });
+
+      if (!res.ok) {
+        console.error('Failed to create expense', await res.text());
+        return;
+      }
+
+      const created = await res.json();
+      const newExpense: Expense = {
+        id: created.expenseId ?? created.id,
+        merchant: created.merchant,
+        category: created.category,
+        amount: created.amount,
+        date: created.date,
+        status: created.status,
+        source: created.source
+      };
+
+      setExpenses((prev) => sortByDateDesc([newExpense, ...prev]));
+      handleCloseModal();
+    } catch (error) {
+      console.error('Failed to create expense', error);
+    }
   };
 
   const handleCloseModal = () => {
@@ -85,6 +116,35 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
       setExpenses((prev) => sortByDateDesc([newExpense, ...prev]));
     }
   };
+
+  useEffect(() => {
+    if (!API_BASE_URL || !userId) return;
+
+    const fetchExpenses = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/expenses?userId=${encodeURIComponent(userId)}`);
+        if (!res.ok) {
+          console.error('Failed to load expenses', await res.text());
+          return;
+        }
+        const items = await res.json();
+        const mapped: Expense[] = (items || []).map((item: any) => ({
+          id: item.expenseId ?? item.id,
+          merchant: item.merchant,
+          category: item.category,
+          amount: item.amount,
+          date: item.date,
+          status: item.status,
+          source: item.source
+        }));
+        setExpenses(sortByDateDesc(mapped));
+      } catch (error) {
+        console.error('Failed to load expenses', error);
+      }
+    };
+
+    fetchExpenses();
+  }, [userId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

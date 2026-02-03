@@ -14,10 +14,6 @@ Parameters:
     Type: String
     Default: uploads/
     Description: "S3 prefix for receipt uploads"
-  MaxLambdaConcurrency:
-    Type: Number
-    Default: 2
-    Description: "Cost guardrail: max concurrent executions per Lambda"
 
 Globals:
   Function:
@@ -25,7 +21,7 @@ Globals:
     Architectures:
       - x86_64
     Timeout: 15
-    MemorySize: 256
+    MemorySize: 128
     Tracing: PassThrough
     Environment:
       Variables:
@@ -85,13 +81,15 @@ Resources:
         AllowHeaders:
           - Content-Type
           - Authorization
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
 
   CreateExpenseFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../
       Handler: services/expenses/createExpense.handler
-      ReservedConcurrentExecutions: !Ref MaxLambdaConcurrency
       Environment:
         Variables:
           EXPENSES_TABLE: !Ref ExpensesTable
@@ -114,7 +112,6 @@ Resources:
     Properties:
       CodeUri: ../
       Handler: services/expenses/listExpenses.handler
-      ReservedConcurrentExecutions: !Ref MaxLambdaConcurrency
       Environment:
         Variables:
           EXPENSES_TABLE: !Ref ExpensesTable
@@ -134,7 +131,6 @@ Resources:
     Properties:
       CodeUri: ../
       Handler: services/receipts/generateUploadUrl.handler
-      ReservedConcurrentExecutions: !Ref MaxLambdaConcurrency
       Environment:
         Variables:
           RECEIPT_BUCKET: !Ref ReceiptBucket
@@ -158,7 +154,7 @@ Resources:
     Properties:
       CodeUri: ../
       Handler: services/receipts/processReceipt.handler
-      ReservedConcurrentExecutions: !Ref MaxLambdaConcurrency
+      MemorySize: 256
       Environment:
         Variables:
           RECEIPT_BUCKET: !Ref ReceiptBucket
@@ -181,36 +177,13 @@ Resources:
                 - textract:DetectDocumentText
               Resource: "*"
 
-  ReceiptBucketToTextractPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt ProcessReceiptFunction.Arn
-      Principal: s3.amazonaws.com
-      SourceArn: !Sub "arn:aws:s3:::${ReceiptBucket}"
 
-  ReceiptBucketNotification:
-    Type: AWS::S3::BucketNotification
-    Properties:
-      Bucket: !Ref ReceiptBucket
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: prefix
-                    Value: !Ref UploadPrefix
-            Function: !GetAtt ProcessReceiptFunction.Arn
-    DependsOn:
-      - ReceiptBucketToTextractPermission
 
   AiQueryPlannerFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../
       Handler: services/ai/aiQueryPlanner.handler
-      ReservedConcurrentExecutions: !Ref MaxLambdaConcurrency
       Environment:
         Variables:
           EXPENSES_TABLE: !Ref ExpensesTable

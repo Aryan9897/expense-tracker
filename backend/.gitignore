@@ -38,6 +38,8 @@ pnpm-debug.log*
 .serverless/
 .sst/
 tmp/
+infra/samconfig.toml
+infra/template.yaml
 
 # IDE/OS noise
 .vscode/
