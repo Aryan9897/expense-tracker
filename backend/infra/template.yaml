@@ -17,7 +17,7 @@ Parameters:
 
 Globals:
   Function:
-    Runtime: nodejs20.x
+    Runtime: nodejs24.x
     Architectures:
       - x86_64
     Timeout: 15
@@ -75,6 +75,8 @@ Resources:
         AllowMethods:
           - GET
           - POST
+          - PUT
+          - DELETE
           - OPTIONS
         AllowOrigins:
           - "*"
@@ -125,6 +127,50 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /expenses
             Method: GET
+
+  UpdateExpenseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: services/expenses/updateExpense.handler
+      Environment:
+        Variables:
+          EXPENSES_TABLE: !Ref ExpensesTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt ExpensesTable.Arn
+      Events:
+        UpdateExpense:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /expense
+            Method: PUT
+
+  DeleteExpenseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: services/expenses/deleteExpense.handler
+      Environment:
+        Variables:
+          EXPENSES_TABLE: !Ref ExpensesTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DeleteItem
+              Resource: !GetAtt ExpensesTable.Arn
+      Events:
+        DeleteExpense:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /expense
+            Method: DELETE
 
   GenerateUploadUrlFunction:
     Type: AWS::Serverless::Function
@@ -209,6 +255,18 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/aws/lambda/${ListExpensesFunction}"
+      RetentionInDays: 7
+
+  UpdateExpenseLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${UpdateExpenseFunction}"
+      RetentionInDays: 7
+
+  DeleteExpenseLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${DeleteExpenseFunction}"
       RetentionInDays: 7
 
   GenerateUploadUrlLogGroup:

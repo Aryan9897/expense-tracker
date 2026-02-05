@@ -29,13 +29,37 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
   const [categories, setCategories] = useState(['Groceries', 'Transport', 'Software', 'Coffee']);
   const totals: ExpenseTotals = computeTotals(expenses);
   const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const userId = email;
 
-  const handleRemove = (id: string) => {
-    setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+  const handleRemove = async (id: string) => {
+    const confirmed = window.confirm('Are you sure you want to delete the expense?');
+    if (!confirmed) return;
+
+    if (!API_BASE_URL) {
+      console.error('VITE_API_BASE_URL is not set');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/expense`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, expenseId: id })
+      });
+
+      if (!res.ok) {
+        console.error('Failed to delete expense', await res.text());
+        return;
+      }
+
+      setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+    } catch (error) {
+      console.error('Failed to delete expense', error);
+    }
   };
 
   const handleAdd = async (event: FormEvent<HTMLFormElement>) => {
@@ -56,11 +80,13 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
     }
 
     try {
+      const isEditing = Boolean(editingExpenseId);
       const res = await fetch(`${API_BASE_URL}/expense`, {
-        method: 'POST',
+        method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
+          expenseId: editingExpenseId ?? undefined,
           merchant: form.merchant.trim(),
           category: finalCategory,
           amount: amountValue,
@@ -71,31 +97,54 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
       });
 
       if (!res.ok) {
-        console.error('Failed to create expense', await res.text());
+        console.error(`Failed to ${isEditing ? 'update' : 'create'} expense`, await res.text());
         return;
       }
 
-      const created = await res.json();
-      const newExpense: Expense = {
-        id: created.expenseId ?? created.id,
-        merchant: created.merchant,
-        category: created.category,
-        amount: created.amount,
-        date: created.date,
-        status: created.status,
-        source: created.source
+      const saved = await res.json();
+      const nextExpense: Expense = {
+        id: saved.expenseId ?? saved.id,
+        merchant: saved.merchant,
+        category: saved.category,
+        amount: saved.amount,
+        date: saved.date,
+        status: saved.status,
+        source: saved.source
       };
 
-      setExpenses((prev) => sortByDateDesc([newExpense, ...prev]));
+      setExpenses((prev) => {
+        if (isEditing) {
+          const updated = prev.map((expense) => (expense.id === nextExpense.id ? nextExpense : expense));
+          return sortByDateDesc(updated);
+        }
+        return sortByDateDesc([nextExpense, ...prev]);
+      });
       handleCloseModal();
     } catch (error) {
-      console.error('Failed to create expense', error);
+      console.error(`Failed to ${editingExpenseId ? 'update' : 'create'} expense`, error);
     }
   };
 
   const handleCloseModal = () => {
     setForm({ merchant: '', category: 'Groceries', amount: '', date: '', status: 'pending', customCategory: '' });
     setIsAddExpenseModalOpen(false);
+    setEditingExpenseId(null);
+  };
+
+  const handleEdit = (expense: Expense) => {
+    if (!categories.includes(expense.category)) {
+      setCategories((prev) => [...prev, expense.category]);
+    }
+    setForm({
+      merchant: expense.merchant,
+      category: expense.category,
+      amount: expense.amount.toString(),
+      date: expense.date,
+      status: expense.status,
+      customCategory: ''
+    });
+    setEditingExpenseId(expense.id);
+    setIsAddExpenseModalOpen(true);
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -271,6 +320,26 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
                 <span className={styles.actionCell}>
                   <button
                     type="button"
+                    className={styles.editBtn}
+                    onClick={() => handleEdit(expense)}
+                    aria-label="Edit expense"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
                     className={styles.deleteBtn}
                     onClick={() => handleRemove(expense.id)}
                     aria-label="Remove expense"
@@ -302,7 +371,7 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
       <Modal
         isOpen={isAddExpenseModalOpen}
         onClose={handleCloseModal}
-        title="Add Expense"
+        title={editingExpenseId ? 'Edit Expense' : 'Add Expense'}
       >
         <form onSubmit={handleAdd} className={styles.modalForm}>
           <label>
@@ -379,7 +448,7 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
               Cancel
             </button>
             <button type="submit" className="primary-btn">
-              Add Expense
+              {editingExpenseId ? 'Save Changes' : 'Add Expense'}
             </button>
           </div>
         </form>

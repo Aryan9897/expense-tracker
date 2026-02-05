@@ -39,7 +39,6 @@ pnpm-debug.log*
 .sst/
 tmp/
 backend/infra/samconfig.toml
-backend/infra/template.yaml
 
 # IDE/OS noise
 .vscode/

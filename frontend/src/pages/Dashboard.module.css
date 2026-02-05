@@ -160,6 +160,51 @@
 .actionCell {
   display: flex;
   justify-content: flex-start;
+  gap: 8px;
+}
+
+.editBtn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #2563eb;
+  border-radius: 10px;
+  background: transparent;
+  color: #2563eb;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.editBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.editBtn:hover {
+  background: #eff6ff;
+}
+
+.editBtn::after {
+  content: 'Edit expense';
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  font-size: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease-in-out;
+}
+
+.editBtn:hover::after {
+  opacity: 1;
 }
 
 .deleteBtn {
