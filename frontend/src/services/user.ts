@@ -6,9 +6,6 @@ export type ProfileData = {
     lastName: string;
     email: string;
     phone: string;
-    jobTitle: string;
-    company: string;
-    bio: string;
 };
 
 export const UserService = {
@@ -25,8 +22,7 @@ export const UserService = {
 
     async updateUserProfile(uid: string, data: ProfileData): Promise<void> {
         const docRef = doc(db, 'users', uid);
-        // merge: true ensures we don't overwrite if we only want to update partial fields later
-        // but here we are usually saving the whole form.
-        await setDoc(docRef, data, { merge: true });
+        // Overwrite the profile to avoid retaining removed fields.
+        await setDoc(docRef, data);
     }
 };

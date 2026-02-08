@@ -1,134 +1,208 @@
-.loginPage {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 64px 20px;
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=Lora:wght@600;700&display=swap');
+
+.page {
+  --ink: #2b2623;
+  --ink-soft: #5b524a;
+  --cream: #fbf6f1;
+  --sand: #efe2d6;
+  --terracotta: #c48a72;
+  --terracotta-strong: #a86f58;
+  --sage: #8b9885;
+  --border: rgba(91, 82, 74, 0.18);
+  --shadow: 0 20px 50px rgba(54, 38, 28, 0.1);
+  min-height: 100vh;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 28px;
+  place-items: center;
+  padding: clamp(20px, 4vw, 44px);
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--ink);
+  background: linear-gradient(180deg, #fffaf6 0%, #f6efe8 55%, #f3e7de 100%);
+}
+
+.simpleLayout {
+  width: min(1040px, 100%);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: clamp(24px, 4vw, 56px);
   align-items: center;
 }
 
-.hero {
-  position: relative;
-  padding: 32px;
-  border-radius: 24px;
-  background: radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.18), transparent 35%),
-    radial-gradient(circle at 80% 0%, rgba(16, 185, 129, 0.18), transparent 30%),
-    linear-gradient(135deg, #f1f5f9 0%, #eef2ff 40%, #e0f2fe 100%);
-  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.12);
-  overflow: hidden;
-}
-
-.heroBadge {
-  display: inline-block;
-  background: #0f172a;
-  color: #e2e8f0;
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-}
-
-.heroTitle {
-  margin: 16px 0 10px;
-  font-size: 34px;
-  line-height: 1.2;
-}
-
-.heroCopy {
-  max-width: 520px;
-}
-
-.heroGrid {
-  margin-top: 24px;
+.intro {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
   gap: 12px;
 }
 
-.heroTile {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 10px;
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
-}
-
-.heroIcon {
+.brandMark {
   width: 40px;
   height: 40px;
-  display: grid;
-  place-items: center;
   border-radius: 12px;
-  background: #e0f2fe;
-  font-size: 18px;
+  background: linear-gradient(145deg, rgba(196, 138, 114, 0.95), rgba(139, 152, 133, 0.85));
+  box-shadow: 0 12px 24px rgba(196, 138, 114, 0.3);
 }
 
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 28px;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.14);
+.brandName {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
-.cardHead h2 {
-  margin: 6px 0 4px;
+.title {
+  margin: 0;
+  font-family: 'Lora', 'Times New Roman', serif;
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: 1.18;
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 480px;
+  color: rgba(58, 49, 45, 0.78);
+  font-size: 16px;
+}
+
+.featureRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.featureLabel {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(91, 82, 74, 0.6);
+}
+
+.featureValue {
+  margin: 6px 0 0;
+  font-weight: 600;
+  color: rgba(43, 38, 35, 0.9);
+}
+
+.formCard {
+  width: 100%;
+  border-radius: 26px;
+  padding: clamp(22px, 4vw, 36px);
+  background: #ffffff;
+  border: 1px solid rgba(91, 82, 74, 0.14);
+  box-shadow: var(--shadow);
+}
+
+.formHeader {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.formHeader h2 {
+  margin: 0;
+  font-family: 'Lora', 'Times New Roman', serif;
+  font-size: 26px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  color: rgba(91, 82, 74, 0.65);
+  font-weight: 600;
+}
+
+.formSubtext {
+  margin: 0;
+  color: rgba(58, 49, 45, 0.7);
+  font-size: 14px;
 }
 
 .loginForm {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 14px;
+  display: grid;
+  gap: 14px;
 }
 
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  gap: 8px;
   font-weight: 600;
+  color: var(--ink-soft);
 }
 
 .field input {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 12px 14px;
   font-size: 15px;
-  background: #f8fafc;
+  background: #ffffff;
+  color: var(--ink);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .field input:focus {
-  outline: 2px solid #cbd5ff;
+  outline: none;
+  border-color: rgba(196, 138, 114, 0.6);
+  box-shadow: 0 0 0 3px rgba(196, 138, 114, 0.16);
 }
 
-.buttonWithIcon {
-  display: inline-flex;
+.primaryBtn {
+  width: 100%;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--terracotta) 0%, var(--terracotta-strong) 100%);
+  box-shadow: 0 14px 26px rgba(196, 138, 114, 0.24);
+}
+
+.divider {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  gap: 12px;
+  margin: 8px 0 4px;
+  color: rgba(58, 49, 45, 0.55);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
-.signupText {
-  text-align: center;
-  font-size: 14px;
-}
-
-.signupText a {
-  color: var(--primary);
-  font-weight: 600;
-}
-
-.signupText a:hover {
-  text-decoration: underline;
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(91, 82, 74, 0.16);
 }
 
 .googleBtnContainer {
   display: flex;
   justify-content: center;
+}
+
+.formFooter {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(58, 49, 45, 0.7);
+}
+
+.linkBtn {
+  background: none;
+  border: none;
+  color: var(--terracotta-strong);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.footnote {
+  margin-top: 8px;
+  color: rgba(58, 49, 45, 0.6);
+  font-size: 13px;
+  text-align: center;
 }
 
 .srOnly {
@@ -143,35 +217,41 @@
   border: 0;
 }
 
+@media (max-width: 860px) {
+  .simpleLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Google sign-in button (official styling, scoped globally) */
 :global(.gsi-material-button) {
   -moz-user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;
   -webkit-appearance: none;
-  background-color: WHITE;
+  background-color: #ffffff;
   background-image: none;
-  border: 1px solid #747775;
+  border: 1px solid rgba(91, 82, 74, 0.18);
   -webkit-border-radius: 20px;
   border-radius: 20px;
   -webkit-box-sizing: border-box;
   box-sizing: border-box;
   color: #1f1f1f;
   cursor: pointer;
-  font-family: 'Roboto', arial, sans-serif;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   font-size: 14px;
-  height: 40px;
+  height: 44px;
   letter-spacing: 0.25px;
   outline: none;
   overflow: hidden;
-  padding: 0 12px;
+  padding: 0 14px;
   position: relative;
   text-align: center;
   -webkit-transition: background-color 0.218s, border-color 0.218s, box-shadow 0.218s;
   transition: background-color 0.218s, border-color 0.218s, box-shadow 0.218s;
   vertical-align: middle;
   white-space: nowrap;
-  width: auto;
+  width: 100%;
   max-width: 400px;
   min-width: min-content;
 }
@@ -200,8 +280,8 @@
 :global(.gsi-material-button .gsi-material-button-contents) {
   -webkit-flex-grow: 1;
   flex-grow: 1;
-  font-family: 'Roboto', arial, sans-serif;
-  font-weight: 500;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: top;
@@ -236,14 +316,4 @@
 :global(.gsi-material-button:not(:disabled):focus .gsi-material-button-state) {
   background-color: #303030;
   opacity: 12%;
-}
-
-:global(.gsi-material-button:not(:disabled):hover) {
-  -webkit-box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
-  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
-}
-
-:global(.gsi-material-button:not(:disabled):hover .gsi-material-button-state) {
-  background-color: #303030;
-  opacity: 8%;
 }

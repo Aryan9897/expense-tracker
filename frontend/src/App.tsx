@@ -18,10 +18,7 @@ function App() {
     firstName: '',
     lastName: '',
     email: '',
-    phone: '',
-    jobTitle: '',
-    company: '',
-    bio: ''
+    phone: ''
   });
   const [auth, setAuth] = useState({
     password: '',
@@ -47,10 +44,7 @@ function App() {
           firstName: '',
           lastName: '',
           email: '',
-          phone: '',
-          jobTitle: '',
-          company: '',
-          bio: ''
+          phone: ''
         });
       }
     }
@@ -80,10 +74,7 @@ function App() {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
-        phone: data.phone,
-        jobTitle: data.jobTitle,
-        company: data.company,
-        bio: data.bio
+        phone: data.phone
       };
 
       setProfile(newProfile);

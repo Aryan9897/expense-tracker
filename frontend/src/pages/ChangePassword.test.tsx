@@ -22,7 +22,7 @@ describe('ChangePassword', () => {
 
     test('renders change password form', () => {
         render(<ChangePassword onCancel={mockOnCancel} onSuccess={mockOnSuccess} />);
-        expect(screen.getByRole('heading', { name: /Change Password/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Update your password/i })).toBeInTheDocument();
         expect(screen.getByLabelText(/^Old password/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/^New password/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/Re-enter new password/i)).toBeInTheDocument();

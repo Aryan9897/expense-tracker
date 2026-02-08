@@ -8,9 +8,6 @@ describe('Profile', () => {
         lastName: 'Doe',
         email: 'jane@example.com',
         phone: '123-456-7890',
-        jobTitle: 'Developer',
-        company: 'Tech Corp',
-        bio: 'Hello world',
     };
 
     const defaultProps = {
@@ -27,7 +24,6 @@ describe('Profile', () => {
         expect(screen.getByDisplayValue('Jane')).toBeInTheDocument();
         expect(screen.getByDisplayValue('Doe')).toBeInTheDocument();
         expect(screen.getByDisplayValue('jane@example.com')).toBeInTheDocument();
-        expect(screen.getByDisplayValue('Tech Corp')).toBeInTheDocument();
     });
 
     test('updates form fields', () => {

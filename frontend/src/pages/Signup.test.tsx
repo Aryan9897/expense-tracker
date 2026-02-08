@@ -9,9 +9,6 @@ describe('Signup', () => {
         lastName: '',
         email: '',
         phone: '',
-        jobTitle: '',
-        company: '',
-        bio: '',
         password: '',
         confirmPassword: '',
     };
@@ -26,7 +23,7 @@ describe('Signup', () => {
 
     test('renders signup form', () => {
         render(<Signup {...defaultProps} />);
-        expect(screen.getByRole('heading', { name: /Join AI Expense Tracker/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Start tracking your expenses/i })).toBeInTheDocument();
         expect(screen.getByLabelText(/First name/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/^Password/i)).toBeInTheDocument();
@@ -34,10 +31,8 @@ describe('Signup', () => {
     });
 
     test('validates required fields', async () => {
-        const { container } = render(<Signup {...defaultProps} />);
-        // Button is outside form, so we target form directly by ID or finding it via inputs
-        const form = container.querySelector('#signup-form');
-        fireEvent.submit(form!);
+        render(<Signup {...defaultProps} />);
+        fireEvent.submit(screen.getByRole('button', { name: /Sign up/i }));
         expect(await screen.findByText('Please complete all required fields.')).toBeInTheDocument();
         expect(defaultProps.onSubmit).not.toHaveBeenCalled();
     });

@@ -51,16 +51,12 @@ export function ChangePassword({ onCancel, onSuccess }: ChangePasswordProps) {
 
     return (
         <div className={styles.page}>
-            <div className={styles.header}>
-                <p className="muted small">Account Security</p>
-                <h2>Change Password</h2>
-            </div>
-
             <div className={styles.card}>
                 <div className={styles.cardHead}>
                     <div>
+                        <p className="muted small">Account Security</p>
                         <h3>Update your password</h3>
-                        <p className="muted small">Ensure your account is using a strong, secure password.</p>
+                        <p className={styles.subtext}>Ensure your account is using a strong, secure password.</p>
                     </div>
                 </div>
 

@@ -27,7 +27,7 @@
   height: 44px;
   border-radius: 50%;
   border: none;
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
   color: white;
   display: grid;
   place-items: center;
@@ -61,7 +61,7 @@
 }
 
 .menuItem:hover {
-  background: #f1f5f9;
+  background: #f7efe7;
 }
 
 .statsGrid {
@@ -112,19 +112,21 @@
   border-radius: 10px;
   padding: 12px 14px;
   font-size: 15px;
-  background: #f8fafc;
+  background: #ffffff;
 }
 
 .inlineForm input:focus,
 .inlineForm select:focus {
-  outline: 2px solid #cbd5ff;
+  outline: none;
+  border-color: rgba(196, 138, 114, 0.6);
+  box-shadow: 0 0 0 3px rgba(196, 138, 114, 0.16);
 }
 
 .dropzone {
   border: 1px dashed var(--border);
   border-radius: 12px;
   padding: 18px;
-  background: #f8fafc;
+  background: #f9f4ef;
 }
 
 .table {
@@ -150,7 +152,7 @@
 
 .tableRow {
   padding: 10px 8px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--border);
 }
 
 .amount {
@@ -166,10 +168,10 @@
 .editBtn {
   width: 36px;
   height: 36px;
-  border: 1px solid #2563eb;
+  border: 1px solid rgba(196, 138, 114, 0.7);
   border-radius: 10px;
   background: transparent;
-  color: #2563eb;
+  color: #a86f58;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -183,7 +185,7 @@
 }
 
 .editBtn:hover {
-  background: #eff6ff;
+  background: #f7efe7;
 }
 
 .editBtn::after {
@@ -192,8 +194,8 @@
   left: 50%;
   bottom: calc(100% + 6px);
   transform: translateX(-50%);
-  background: #0f172a;
-  color: #f8fafc;
+  background: #2b2623;
+  color: #fff7f0;
   padding: 6px 10px;
   border-radius: 8px;
   white-space: nowrap;
@@ -210,10 +212,10 @@
 .deleteBtn {
   width: 36px;
   height: 36px;
-  border: 1px solid #ef4444;
+  border: 1px solid rgba(182, 88, 72, 0.8);
   border-radius: 10px;
   background: transparent;
-  color: #ef4444;
+  color: #b25848;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -227,7 +229,7 @@
 }
 
 .deleteBtn:hover {
-  background: #fef2f2;
+  background: #fff1ec;
 }
 
 .deleteBtn::after {
@@ -236,8 +238,8 @@
   left: 50%;
   bottom: calc(100% + 6px);
   transform: translateX(-50%);
-  background: #0f172a;
-  color: #f8fafc;
+  background: #2b2623;
+  color: #fff7f0;
   padding: 6px 10px;
   border-radius: 8px;
   white-space: nowrap;
@@ -259,23 +261,23 @@
   border-radius: 999px;
   font-weight: 600;
   font-size: 13px;
-  background: #e2e8f0;
-  color: #334155;
+  background: #f3e7de;
+  color: #5b524a;
 }
 
 .success {
-  background: #dcfce7;
-  color: #15803d;
+  background: rgba(139, 152, 133, 0.2);
+  color: #5f6a58;
 }
 
 .neutral {
-  background: #f1f5f9;
-  color: #334155;
+  background: #f5ede5;
+  color: #5b524a;
 }
 
 .progress {
   height: 10px;
-  background: #e2e8f0;
+  background: #efe2d6;
   border-radius: 999px;
   overflow: hidden;
   margin: 10px 0;
@@ -303,7 +305,7 @@
 .emptyState {
   padding: 48px;
   text-align: center;
-  background: #f8fafc;
+  background: #f9f4ef;
   border-radius: 12px;
   border: 1px dashed var(--border);
   margin-top: 20px;
@@ -341,13 +343,14 @@
   border-radius: 8px;
   font-size: 1rem;
   transition: border-color 0.2s;
+  background: #ffffff;
 }
 
 .modalForm input:focus,
 .modalForm select:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: rgba(196, 138, 114, 0.6);
+  box-shadow: 0 0 0 3px rgba(196, 138, 114, 0.16);
 }
 
 .modalActions {
