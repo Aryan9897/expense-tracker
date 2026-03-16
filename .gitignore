@@ -44,3 +44,4 @@ backend/infra/samconfig.toml
 .vscode/
 .DS_Store
 Thumbs.db
+.claude/

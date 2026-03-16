@@ -1,23 +1,85 @@
 .card {
   background: var(--surface);
-  padding: 16px;
-  border-radius: 14px;
+  padding: 22px 24px;
+  border-radius: 16px;
   border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
   box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.card h3 {
-  margin: 6px 0 0;
+.icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.content {
+  flex: 1;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 4px 0 0;
+  letter-spacing: -0.5px;
 }
 
 .accentPrimary {
-  border-color: rgba(196, 138, 114, 0.35);
+  border-left-color: var(--primary);
+}
+
+.accentPrimary .icon {
+  background: rgba(196, 138, 114, 0.12);
+  color: var(--primary-strong);
+}
+
+.accentPrimary .value {
+  color: #1a1a1a;
 }
 
 .accentAmber {
-  border-color: rgba(206, 166, 125, 0.35);
+  border-left-color: #c9a06c;
+}
+
+.accentAmber .icon {
+  background: rgba(206, 166, 125, 0.15);
+  color: #9a7740;
+}
+
+.accentAmber .value {
+  color: #1a1a1a;
 }
 
 .accentGreen {
-  border-color: rgba(139, 152, 133, 0.35);
+  border-left-color: var(--accent);
+}
+
+.accentGreen .icon {
+  background: rgba(139, 152, 133, 0.15);
+  color: #5f6a58;
+}
+
+.accentGreen .value {
+  color: #5f6a58;
 }
