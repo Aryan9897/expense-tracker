@@ -1,17 +1,24 @@
-const pickText = (field) => field?.ValueDetection?.Text || null;
+// libs/ocr/parseExpenseSummary.js
 
-export const extractExpenseSummary = (textractResponse) => {
-  const summary = {};
-  const doc = textractResponse?.ExpenseDocuments?.[0];
-  const fields = doc?.SummaryFields || [];
+/**
+ * Extracts JSON from an LLM response that may be wrapped in markdown code fences.
+ * Returns a structured expense object, or {} if parsing fails.
+ */
+export const parseOcrResponse = (text) => {
+  if (!text) return {};
 
-  for (const field of fields) {
-    const label = field?.Type?.Text || "UNKNOWN";
-    const value = pickText(field);
-    if (value) {
-      summary[label] = value;
-    }
+  // Strip markdown code fences if present
+  const stripped = text.replace(/```(?:json)?\n?/g, "").trim();
+
+  try {
+    const parsed = JSON.parse(stripped);
+    return {
+      merchant: parsed.merchant ?? null,
+      amount: parsed.amount ?? null,
+      date: parsed.date ?? null,
+      category: parsed.category ?? null
+    };
+  } catch {
+    return {};
   }
-
-  return summary;
 };

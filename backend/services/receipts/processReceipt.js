@@ -1,14 +1,22 @@
-import { AnalyzeExpenseCommand } from "@aws-sdk/client-textract";
+// services/receipts/processReceipt.js
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { PutCommand } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "crypto";
+import { s3 } from "../../libs/s3/index.js";
 import { ddb } from "../../libs/dynamodb/index.js";
-import { textract } from "../../libs/ocr/textract.js";
-import { extractExpenseSummary } from "../../libs/ocr/parseExpenseSummary.js";
+import { analyzeReceipt } from "../../libs/ocr/openrouter.js";
+import { parseOcrResponse } from "../../libs/ocr/parseExpenseSummary.js";
 
 const getUserIdFromKey = (key, prefix) => {
   const normalized = key.startsWith(prefix) ? key.slice(prefix.length) : key;
   const parts = normalized.split("/");
   return parts.length > 1 ? parts[0] : null;
+};
+
+const streamToBase64 = async (stream) => {
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return Buffer.concat(chunks).toString("base64");
 };
 
 export const handler = async (event) => {
@@ -36,34 +44,31 @@ export const handler = async (event) => {
   }
 
   try {
-    const textractRes = await textract.send(
-      new AnalyzeExpenseCommand({
-        Document: {
-          S3Object: {
-            Bucket: bucket,
-            Name: key
-          }
-        }
-      })
-    );
+    // 1. Fetch image from S3
+    const s3Res = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+    const contentType = s3Res.ContentType || "image/jpeg";
+    const imageBase64 = await streamToBase64(s3Res.Body);
 
-    const summary = extractExpenseSummary(textractRes);
+    // 2. Analyze with OpenRouter
+    const rawText = await analyzeReceipt(imageBase64, contentType);
 
+    // 3. Parse structured fields
+    const parsed = parseOcrResponse(rawText);
+
+    // 4. Store in DynamoDB
     const item = {
       userId,
       expenseId: randomUUID(),
       source: "receipt",
       receiptKey: key,
-      receiptSummary: summary,
+      merchant: parsed.merchant,
+      amount: parsed.amount,
+      date: parsed.date,
+      category: parsed.category,
       createdAt: new Date().toISOString()
     };
 
-    await ddb.send(
-      new PutCommand({
-        TableName: tableName,
-        Item: item
-      })
-    );
+    await ddb.send(new PutCommand({ TableName: tableName, Item: item }));
 
     return { statusCode: 200, body: "OK" };
   } catch (err) {

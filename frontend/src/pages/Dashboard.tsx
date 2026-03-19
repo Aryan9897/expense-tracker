@@ -32,6 +32,7 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const menuRef = useRef<HTMLDivElement | null>(null);
   const userId = email;
 
@@ -147,22 +148,49 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
     setIsAddExpenseModalOpen(true);
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      // Handle file upload logic here
-      console.log('File selected:', file);
-      // For now just simulate adding an expense from receipt
-      const newExpense: Expense = {
-        id: `exp-${Date.now()}`,
-        merchant: 'Receipt Upload',
-        category: 'Uncategorized',
-        amount: 0,
-        date: new Date().toISOString().split('T')[0],
-        status: 'pending',
-        source: 'receipt'
-      };
-      setExpenses((prev) => sortByDateDesc([newExpense, ...prev]));
+    if (!file || !API_BASE_URL) return;
+
+    // Reset input so the same file can be re-selected later
+    event.target.value = '';
+
+    setUploadStatus('uploading');
+    try {
+      // Step 1: get presigned upload URL
+      const urlRes = await fetch(`${API_BASE_URL}/receipt/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, contentType: file.type || 'image/jpeg' })
+      });
+
+      if (!urlRes.ok) {
+        console.error('Failed to get upload URL', await urlRes.text());
+        setUploadStatus('error');
+        return;
+      }
+
+      const { uploadUrl } = await urlRes.json();
+
+      // Step 2: upload file directly to S3
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'image/jpeg' },
+        body: file
+      });
+
+      if (!uploadRes.ok) {
+        console.error('Failed to upload receipt to S3', uploadRes.status);
+        setUploadStatus('error');
+        return;
+      }
+
+      setUploadStatus('done');
+      // Auto-clear success message after 6 seconds
+      setTimeout(() => setUploadStatus('idle'), 6000);
+    } catch (error) {
+      console.error('Receipt upload failed', error);
+      setUploadStatus('error');
     }
   };
 
@@ -294,8 +322,9 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
             <button
               className="ghost-btn small"
               onClick={() => fileInputRef.current?.click()}
+              disabled={uploadStatus === 'uploading'}
             >
-              Upload receipt
+              {uploadStatus === 'uploading' ? 'Uploading…' : 'Upload receipt'}
             </button>
             <input
               type="file"
@@ -305,6 +334,16 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
               onChange={handleFileSelect}
               aria-hidden="true"
             />
+            {uploadStatus === 'done' && (
+              <p className="muted small" style={{ marginTop: '8px' }}>
+                Receipt uploaded — scanning in progress. Refresh in a few seconds to see it.
+              </p>
+            )}
+            {uploadStatus === 'error' && (
+              <p className="muted small" style={{ marginTop: '8px', color: 'var(--color-danger, #e53e3e)' }}>
+                Upload failed. Please try again.
+              </p>
+            )}
           </div>
         </div>
         <div className={styles.table}>

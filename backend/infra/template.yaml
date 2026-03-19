@@ -14,6 +14,10 @@ Parameters:
     Type: String
     Default: uploads/
     Description: "S3 prefix for receipt uploads"
+  OpenRouterApiKey:
+    Type: String
+    NoEcho: true
+    Description: "API key for OpenRouter (nvidia/nemotron-nano-12b-v2-vl:free)"
 
 Globals:
   Function:
@@ -46,6 +50,7 @@ Resources:
 
   ReceiptBucket:
     Type: AWS::S3::Bucket
+    DependsOn: ProcessReceiptS3Permission
     Properties:
       BucketName: !Ref ReceiptBucketName
       PublicAccessBlockConfiguration:
@@ -67,6 +72,24 @@ Resources:
             Status: Enabled
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 7
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - "*"
+            AllowedMethods:
+              - PUT
+            AllowedHeaders:
+              - "*"
+            MaxAge: 3000
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: !Ref UploadPrefix
+            Function: !GetAtt ProcessReceiptFunction.Arn
 
   HttpApi:
     Type: AWS::Serverless::HttpApi
@@ -203,9 +226,10 @@ Resources:
       MemorySize: 256
       Environment:
         Variables:
-          RECEIPT_BUCKET: !Ref ReceiptBucket
+          RECEIPT_BUCKET: !Ref ReceiptBucketName
           EXPENSES_TABLE: !Ref ExpensesTable
           UPLOAD_PREFIX: !Ref UploadPrefix
+          OPENROUTER_API_KEY: !Ref OpenRouterApiKey
       Policies:
         - Statement:
             - Effect: Allow
@@ -215,13 +239,15 @@ Resources:
             - Effect: Allow
               Action:
                 - s3:GetObject
-              Resource: !Sub "arn:aws:s3:::${ReceiptBucket}/${UploadPrefix}*"
-            - Effect: Allow
-              Action:
-                - textract:AnalyzeExpense
-                - textract:AnalyzeDocument
-                - textract:DetectDocumentText
-              Resource: "*"
+              Resource: !Sub "arn:aws:s3:::${ReceiptBucketName}/${UploadPrefix}*"
+
+  ProcessReceiptS3Permission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt ProcessReceiptFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub "arn:aws:s3:::${ReceiptBucketName}"
 
 
 
