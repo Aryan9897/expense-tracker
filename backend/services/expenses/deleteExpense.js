@@ -1,5 +1,7 @@
-import { DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { DeleteCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { ddb } from "../../libs/dynamodb/index.js";
+import { s3 } from "../../libs/s3/index.js";
 import { errorResponse, jsonResponse } from "../../libs/http/response.js";
 
 export const handler = async (event) => {
@@ -15,6 +17,31 @@ export const handler = async (event) => {
 
     if (!userId || !expenseId) {
       return errorResponse(400, "Missing userId or expenseId");
+    }
+
+    const bucketName = process.env.RECEIPT_BUCKET;
+
+    // Fetch the expense to check for an associated receipt
+    const { Item: expense } = await ddb.send(
+      new GetCommand({
+        TableName: tableName,
+        Key: { userId, expenseId }
+      })
+    );
+
+    // Best-effort S3 receipt cleanup — if this fails, the 30-day lifecycle rule
+    // on the bucket will eventually remove the orphaned object
+    if (expense?.receiptKey && bucketName) {
+      try {
+        await s3.send(
+          new DeleteObjectCommand({
+            Bucket: bucketName,
+            Key: expense.receiptKey
+          })
+        );
+      } catch (s3Err) {
+        console.warn("Best-effort S3 delete failed for", expense.receiptKey, s3Err);
+      }
     }
 
     await ddb.send(

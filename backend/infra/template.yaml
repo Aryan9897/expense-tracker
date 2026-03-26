@@ -181,12 +181,18 @@ Resources:
       Environment:
         Variables:
           EXPENSES_TABLE: !Ref ExpensesTable
+          RECEIPT_BUCKET: !Ref ReceiptBucketName
       Policies:
         - Statement:
             - Effect: Allow
               Action:
                 - dynamodb:DeleteItem
+                - dynamodb:GetItem
               Resource: !GetAtt ExpensesTable.Arn
+            - Effect: Allow
+              Action:
+                - s3:DeleteObject
+              Resource: !Sub "arn:aws:s3:::${ReceiptBucketName}/${UploadPrefix}*"
       Events:
         DeleteExpense:
           Type: HttpApi
@@ -223,6 +229,7 @@ Resources:
     Properties:
       CodeUri: ../
       Handler: services/receipts/processReceipt.handler
+      Timeout: 30
       MemorySize: 256
       Environment:
         Variables:

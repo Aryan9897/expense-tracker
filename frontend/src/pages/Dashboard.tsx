@@ -33,6 +33,9 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
+  const [processingReceipt, setProcessingReceipt] = useState(false);
+  const [processingTimedOut, setProcessingTimedOut] = useState(false);
+  const knownExpenseIdsRef = useRef<Set<string>>(new Set());
   const menuRef = useRef<HTMLDivElement | null>(null);
   const userId = email;
 
@@ -152,6 +155,8 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
     const file = event.target.files?.[0];
     if (!file || !API_BASE_URL) return;
 
+    setProcessingTimedOut(false);
+
     // Reset input so the same file can be re-selected later
     event.target.value = '';
 
@@ -185,9 +190,10 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
         return;
       }
 
-      setUploadStatus('done');
-      // Auto-clear success message after 6 seconds
-      setTimeout(() => setUploadStatus('idle'), 6000);
+      setUploadStatus('idle');
+      setProcessingReceipt(true);
+      setProcessingTimedOut(false);
+      knownExpenseIdsRef.current = new Set(expenses.map((e) => e.id));
     } catch (error) {
       console.error('Receipt upload failed', error);
       setUploadStatus('error');
@@ -232,6 +238,50 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!processingReceipt || !API_BASE_URL || !userId) return;
+
+    const POLL_INTERVAL = 4000;
+    const TIMEOUT = 60000;
+    const startTime = Date.now();
+
+    const intervalId = setInterval(async () => {
+      if (Date.now() - startTime > TIMEOUT) {
+        setProcessingTimedOut(true);
+        setProcessingReceipt(false);
+        clearInterval(intervalId);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/expenses?userId=${encodeURIComponent(userId)}`);
+        if (!res.ok) return;
+
+        const items = await res.json();
+        const mapped: Expense[] = (items || []).map((item: any) => ({
+          id: item.expenseId ?? item.id,
+          merchant: item.merchant,
+          category: item.category,
+          amount: item.amount,
+          date: item.date,
+          status: item.status,
+          source: item.source
+        }));
+
+        const newExpense = mapped.find((e) => !knownExpenseIdsRef.current.has(e.id));
+        if (newExpense) {
+          setExpenses(sortByDateDesc(mapped));
+          setProcessingReceipt(false);
+          clearInterval(intervalId);
+        }
+      } catch (error) {
+        console.error('Polling failed', error);
+      }
+    }, POLL_INTERVAL);
+
+    return () => clearInterval(intervalId);
+  }, [processingReceipt, userId]);
 
   return (
     <div className={styles.page}>
@@ -322,9 +372,9 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
             <button
               className="ghost-btn small"
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploadStatus === 'uploading'}
+              disabled={uploadStatus === 'uploading' || processingReceipt}
             >
-              {uploadStatus === 'uploading' ? 'Uploading…' : 'Upload receipt'}
+              {uploadStatus === 'uploading' ? 'Uploading…' : processingReceipt ? 'Processing…' : 'Upload receipt'}
             </button>
             <input
               type="file"
@@ -334,11 +384,6 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
               onChange={handleFileSelect}
               aria-hidden="true"
             />
-            {uploadStatus === 'done' && (
-              <p className="muted small" style={{ marginTop: '8px' }}>
-                Receipt uploaded — scanning in progress. Refresh in a few seconds to see it.
-              </p>
-            )}
             {uploadStatus === 'error' && (
               <p className="muted small" style={{ marginTop: '8px', color: 'var(--color-danger, #e53e3e)' }}>
                 Upload failed. Please try again.
@@ -356,74 +401,76 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
             <span>Date</span>
             <span aria-hidden="true" />
           </div>
-          {expenses.length === 0 ? (
+          {processingReceipt && (
+            <div className={styles.skeletonRow}>
+              <span><span className={styles.spinner} />Processing receipt…</span>
+              <span>—</span>
+              <span>—</span>
+              <span>Receipt</span>
+              <span>—</span>
+              <span>—</span>
+              <span />
+            </div>
+          )}
+          {processingTimedOut && (
+            <div className={`${styles.skeletonRow} ${styles.skeletonError}`}>
+              <span>Processing is taking longer than expected. Please refresh.</span>
+              <span />
+              <span />
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
+          )}
+          {expenses.length === 0 && !processingReceipt && !processingTimedOut && (
             <div className={styles.emptyState}>
               <p className="muted">No activity, get started by adding your expenses</p>
             </div>
-          ) : (
-            expenses.map((expense) => (
-              <div className={styles.tableRow} key={expense.id}>
-                <span>{expense.merchant}</span>
-                <span className="muted">{expense.category}</span>
-                <span>
-                  <span
-                    className={`${styles.pill} ${expense.status === 'cleared' ? styles.success : styles.neutral
-                      }`}
-                  >
-                    {expense.status === 'cleared' ? 'Cleared' : 'Pending'}
-                  </span>
-                </span>
-                <span className="muted">{expense.source === 'receipt' ? 'Receipt' : 'Manual'}</span>
-                <span className={styles.amount}>${expense.amount.toFixed(2)}</span>
-                <span className="muted">{expense.date}</span>
-                <span className={styles.actionCell}>
-                  <button
-                    type="button"
-                    className={styles.editBtn}
-                    onClick={() => handleEdit(expense)}
-                    aria-label="Edit expense"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.deleteBtn}
-                    onClick={() => handleRemove(expense.id)}
-                    aria-label="Remove expense"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M3 6h18" />
-                      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
-                      <path d="M10 11v6" />
-                      <path d="M14 11v6" />
-                      <path d="M5 6l1 14a1 1 0 0 0 1 .9h10a1 1 0 0 0 1-.9L19 6" />
-                    </svg>
-                  </button>
-                </span>
-              </div>
-            ))
           )}
+          {expenses.map((expense) => (
+            <div className={styles.tableRow} key={expense.id}>
+              <span>{expense.merchant}</span>
+              <span className="muted">{expense.category}</span>
+              <span>
+                <span
+                  className={`${styles.pill} ${expense.status === 'cleared' ? styles.success : styles.neutral}`}
+                >
+                  {expense.status === 'cleared' ? 'Cleared' : 'Pending'}
+                </span>
+              </span>
+              <span className="muted">{expense.source === 'receipt' ? 'Receipt' : 'Manual'}</span>
+              <span className={styles.amount}>${expense.amount.toFixed(2)}</span>
+              <span className="muted">{expense.date}</span>
+              <span className={styles.actionCell}>
+                <button
+                  type="button"
+                  className={styles.editBtn}
+                  onClick={() => handleEdit(expense)}
+                  aria-label="Edit expense"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className={styles.deleteBtn}
+                  onClick={() => handleRemove(expense.id)}
+                  aria-label="Remove expense"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                    <path d="M5 6l1 14a1 1 0 0 0 1 .9h10a1 1 0 0 0 1-.9L19 6" />
+                  </svg>
+                </button>
+              </span>
+            </div>
+          ))}
         </div>
       </section>
 

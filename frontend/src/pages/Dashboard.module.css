@@ -298,12 +298,14 @@
 @media (max-width: 860px) {
 
   .tableHead,
-  .tableRow {
+  .tableRow,
+  .skeletonRow {
     grid-template-columns: 1fr 1fr;
   }
 
   .tableHead span:nth-child(n + 3),
-  .tableRow span:nth-child(n + 3) {
+  .tableRow span:nth-child(n + 3),
+  .skeletonRow span:nth-child(n + 3) {
     display: none;
   }
 }
@@ -364,4 +366,45 @@
   justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.skeletonRow {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.9fr 0.8fr 0.8fr 1fr 0.35fr;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 8px;
+  border-top: 1px solid var(--border);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+.skeletonRow span {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.skeletonError span {
+  color: var(--color-danger, #e53e3e);
+  font-style: normal;
 }

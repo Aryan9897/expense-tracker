@@ -40,6 +40,9 @@ pnpm-debug.log*
 tmp/
 backend/infra/samconfig.toml
 
+# Documentation (generated specs/plans)
+docs/
+
 # IDE/OS noise
 .vscode/
 .DS_Store
