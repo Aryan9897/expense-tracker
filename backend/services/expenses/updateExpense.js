@@ -1,6 +1,7 @@
 import { UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { ddb } from "../../libs/dynamodb/index.js";
 import { errorResponse, jsonResponse } from "../../libs/http/response.js";
+import { verifyAuth } from "../../libs/auth/index.js";
 
 const updatableFields = ["merchant", "category", "amount", "date", "status", "source"];
 
@@ -8,14 +9,19 @@ export const handler = async (event) => {
   try {
     const tableName = process.env.EXPENSES_TABLE;
     if (!tableName) {
-      return errorResponse(500, "Missing EXPENSES_TABLE env var");
+      console.error("Missing EXPENSES_TABLE env var");
+      return errorResponse(500, "Internal server error");
     }
 
-    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-    const { userId, expenseId, ...rest } = body || {};
+    const auth = await verifyAuth(event);
+    if (auth.error) return auth.error;
+    const { userId } = auth;
 
-    if (!userId || !expenseId) {
-      return errorResponse(400, "Missing userId or expenseId");
+    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    const { expenseId, ...rest } = body || {};
+
+    if (!expenseId) {
+      return errorResponse(400, "Missing expenseId");
     }
 
     const updates = {};
@@ -53,7 +59,8 @@ export const handler = async (event) => {
       })
     );
 
-    return jsonResponse(200, result.Attributes || {});
+    const { userId: _, ...responseItem } = result.Attributes || {};
+    return jsonResponse(200, responseItem);
   } catch (err) {
     if (err?.name === "ConditionalCheckFailedException") {
       return errorResponse(404, "Expense not found");

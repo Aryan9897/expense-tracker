@@ -3,20 +3,25 @@ import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { ddb } from "../../libs/dynamodb/index.js";
 import { s3 } from "../../libs/s3/index.js";
 import { errorResponse, jsonResponse } from "../../libs/http/response.js";
+import { verifyAuth } from "../../libs/auth/index.js";
 
 export const handler = async (event) => {
   try {
     const tableName = process.env.EXPENSES_TABLE;
     if (!tableName) {
-      return errorResponse(500, "Missing EXPENSES_TABLE env var");
+      console.error("Missing EXPENSES_TABLE env var");
+      return errorResponse(500, "Internal server error");
     }
 
-    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-    const userId = body?.userId || event?.queryStringParameters?.userId;
-    const expenseId = body?.expenseId || event?.queryStringParameters?.expenseId;
+    const auth = await verifyAuth(event);
+    if (auth.error) return auth.error;
+    const { userId } = auth;
 
-    if (!userId || !expenseId) {
-      return errorResponse(400, "Missing userId or expenseId");
+    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    const expenseId = body?.expenseId;
+
+    if (!expenseId) {
+      return errorResponse(400, "Missing expenseId");
     }
 
     const bucketName = process.env.RECEIPT_BUCKET;

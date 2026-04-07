@@ -3,6 +3,7 @@ import { StatCard } from '../components/StatCard';
 import { Modal } from '../components/Modal';
 import { computeTotals } from '../lib/sampleData';
 import { Expense, ExpenseTotals } from '../types/expense';
+import { useAuth } from '../contexts/AuthContext';
 import styles from './Dashboard.module.css';
 
 const sortByDateDesc = (list: Expense[]) =>
@@ -11,12 +12,13 @@ const sortByDateDesc = (list: Expense[]) =>
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 type DashboardProps = {
-  email: string;
   onSignOut: () => void;
   onOpenProfile: () => void;
 };
 
-export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
+export function Dashboard({ onSignOut, onOpenProfile }: DashboardProps) {
+  const { user } = useAuth();
+  const email = user?.email || '';
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [form, setForm] = useState({
     merchant: '',
@@ -37,7 +39,15 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
   const [processingTimedOut, setProcessingTimedOut] = useState(false);
   const knownExpenseIdsRef = useRef<Set<string>>(new Set());
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const userId = email;
+
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    if (!user) throw new Error('Not authenticated');
+    const token = await user.getIdToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  };
 
   const handleRemove = async (id: string) => {
     const confirmed = window.confirm('Are you sure you want to delete the expense?');
@@ -49,10 +59,11 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
     }
 
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE_URL}/expense`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, expenseId: id })
+        headers,
+        body: JSON.stringify({ expenseId: id })
       });
 
       if (!res.ok) {
@@ -85,11 +96,11 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
 
     try {
       const isEditing = Boolean(editingExpenseId);
+      const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE_URL}/expense`, {
         method: isEditing ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
-          userId,
           expenseId: editingExpenseId ?? undefined,
           merchant: form.merchant.trim(),
           category: finalCategory,
@@ -163,10 +174,11 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
     setUploadStatus('uploading');
     try {
       // Step 1: get presigned upload URL
+      const headers = await getAuthHeaders();
       const urlRes = await fetch(`${API_BASE_URL}/receipt/upload`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, contentType: file.type || 'image/jpeg' })
+        headers,
+        body: JSON.stringify({ contentType: file.type || 'image/jpeg' })
       });
 
       if (!urlRes.ok) {
@@ -201,11 +213,12 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
   };
 
   useEffect(() => {
-    if (!API_BASE_URL || !userId) return;
+    if (!API_BASE_URL || !user) return;
 
     const fetchExpenses = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/expenses?userId=${encodeURIComponent(userId)}`);
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE_URL}/expenses`, { headers });
         if (!res.ok) {
           console.error('Failed to load expenses', await res.text());
           return;
@@ -227,7 +240,7 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
     };
 
     fetchExpenses();
-  }, [userId]);
+  }, [user]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -240,7 +253,7 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
   }, []);
 
   useEffect(() => {
-    if (!processingReceipt || !API_BASE_URL || !userId) return;
+    if (!processingReceipt || !API_BASE_URL || !user) return;
 
     const POLL_INTERVAL = 4000;
     const TIMEOUT = 60000;
@@ -255,7 +268,8 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
       }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/expenses?userId=${encodeURIComponent(userId)}`);
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE_URL}/expenses`, { headers });
         if (!res.ok) return;
 
         const items = await res.json();
@@ -281,7 +295,7 @@ export function Dashboard({ email, onSignOut, onOpenProfile }: DashboardProps) {
     }, POLL_INTERVAL);
 
     return () => clearInterval(intervalId);
-  }, [processingReceipt, userId]);
+  }, [processingReceipt, user]);
 
   return (
     <div className={styles.page}>

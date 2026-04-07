@@ -42,6 +42,7 @@ backend/infra/samconfig.toml
 
 # Documentation (generated specs/plans)
 docs/
+projectDocs/
 
 # IDE/OS noise
 .vscode/

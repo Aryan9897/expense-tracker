@@ -167,7 +167,6 @@ function App() {
         />
       ) : view === 'dashboard' ? (
         <Dashboard
-          email={profile.email || email || user?.email || 'you@example.com'}
           onSignOut={handleLogout}
           onOpenProfile={() => setView('profile')}
         />
