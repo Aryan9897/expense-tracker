@@ -282,6 +282,24 @@ Resources:
             Path: /ai/query
             Method: POST
 
+  ChatFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: services/ai/chatHandler.handler
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          OPENROUTER_API_KEY: !Ref OpenRouterApiKey
+      Events:
+        Chat:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ai/chat
+            Method: POST
+
   CreateExpenseLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -322,6 +340,12 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/aws/lambda/${AiQueryPlannerFunction}"
+      RetentionInDays: 7
+
+  ChatLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ChatFunction}"
       RetentionInDays: 7
 
 Outputs:

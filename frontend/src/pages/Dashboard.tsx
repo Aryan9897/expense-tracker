@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { StatCard } from '../components/StatCard';
 import { Modal } from '../components/Modal';
+import { ChatWidget } from '../components/ChatWidget';
 import { computeTotals } from '../lib/sampleData';
 import { Expense, ExpenseTotals } from '../types/expense';
 import { useAuth } from '../contexts/AuthContext';
@@ -573,6 +574,8 @@ export function Dashboard({ onSignOut, onOpenProfile }: DashboardProps) {
           </div>
         </form>
       </Modal>
+
+      <ChatWidget expenses={expenses} />
     </div>
   );
 }
