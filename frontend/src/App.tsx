@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from './contexts/AuthContext';
-import { auth as firebaseAuth } from './lib/firebase';
 import { UserService } from './services/user';
 import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
@@ -9,7 +8,7 @@ import { Signup } from './pages/Signup';
 import { ChangePassword } from './pages/ChangePassword';
 
 function App() {
-  const { user, loading, loginWithEmail, signupWithEmail, loginWithGoogle, logout, updateUserEmail } = useAuth();
+  const { user, loading, loginWithEmail, signupWithEmail, loginWithGoogle, logout } = useAuth();
   const [view, setView] = useState<'login' | 'signup' | 'dashboard' | 'profile' | 'change-password'>(
     user ? 'dashboard' : 'login'
   );
@@ -68,7 +67,7 @@ function App() {
     setAuthPending(true);
     setAuthError(null);
     try {
-      await signupWithEmail(data.email, data.password, `${data.firstName} ${data.lastName}`.trim());
+      const createdUser = await signupWithEmail(data.email, data.password, `${data.firstName} ${data.lastName}`.trim());
 
       const newProfile = {
         firstName: data.firstName,
@@ -79,29 +78,10 @@ function App() {
 
       setProfile(newProfile);
 
-      // Save to Firestore
-      if (user) {
-        // This might race if user state isn't updated internally yet by Firebase SDK immediately.
-        // However, in typical flows, signupWithEmail waits. The user object in context might update via onAuthStateChanged.
-        // A better approach is to rely on the fact that if signup succeeds, we have a user.
-        // But we need the UID. The signupWithEmail wrapper in AuthContext doesn't return the User object directly, verify AuthContext.
-      }
-
-      // Wait for auth state change to trigger useEffect or handle saving here if possible.
-      // Actually, checking AuthContext, signupWithEmail creates user.
-      // Ideally we would save here, but we need the UID.
-      // Let's modify logic to save profile AFTER successful login/signup if we can get the UID.
-      // Since `signupWithEmail` awaits `createUserWithEmailAndPassword`, the `auth.currentUser` should be populated immediately after.
-
-      // We will perform a check:
-      if (firebaseAuth.currentUser) {
-        await UserService.updateUserProfile(firebaseAuth.currentUser.uid, newProfile);
-      }
+      await UserService.updateUserProfile(createdUser.uid, newProfile);
 
       setEmail(data.email);
       setAuth({ password: data.password, confirmPassword: data.confirmPassword });
-      // View update to dashboard handled by useEffect or manual setView if desired, 
-      // but useEffect [loading, user] will catch the new user state and set dashboard.
     } catch (error) {
       console.error('Signup failed', error);
       setAuthError('Could not create your account. Please try again.');

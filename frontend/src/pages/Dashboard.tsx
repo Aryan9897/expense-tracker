@@ -2,13 +2,22 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { StatCard } from '../components/StatCard';
 import { Modal } from '../components/Modal';
 import { ChatWidget } from '../components/ChatWidget';
-import { computeTotals } from '../lib/sampleData';
 import { Expense, ExpenseTotals } from '../types/expense';
 import { useAuth } from '../contexts/AuthContext';
 import styles from './Dashboard.module.css';
 
 const sortByDateDesc = (list: Expense[]) =>
   [...list].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+const computeTotals = (expenses: Expense[]): ExpenseTotals => {
+  const spent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const pending = expenses
+    .filter((expense) => expense.status === 'pending')
+    .reduce((sum, expense) => sum + expense.amount, 0);
+  const receiptCount = expenses.filter((expense) => expense.source === 'receipt').length;
+
+  return { spent, pending, receiptCount };
+};
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 

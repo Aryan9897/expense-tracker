@@ -259,29 +259,6 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: s3.amazonaws.com
       SourceArn: !Sub "arn:aws:s3:::${ReceiptBucketName}"
-
-
-
-  AiQueryPlannerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ../
-      Handler: services/ai/aiQueryPlanner.handler
-      Environment:
-        Variables:
-          EXPENSES_TABLE: !Ref ExpensesTable
-          OPENAI_API_KEY: ""
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref ExpensesTable
-      Events:
-        AiQuery:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /ai/query
-            Method: POST
-
   ChatFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -334,12 +311,6 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/aws/lambda/${ProcessReceiptFunction}"
-      RetentionInDays: 7
-
-  AiQueryPlannerLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${AiQueryPlannerFunction}"
       RetentionInDays: 7
 
   ChatLogGroup:

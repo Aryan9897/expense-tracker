@@ -9,9 +9,7 @@ import {
   updateProfile,
   EmailAuthProvider,
   reauthenticateWithCredential,
-  updatePassword,
-  updateEmail,
-  sendEmailVerification
+  updatePassword
 } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 
@@ -19,11 +17,10 @@ type AuthContextValue = {
   user: User | null;
   loading: boolean;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  signupWithEmail: (email: string, password: string, displayName?: string) => Promise<void>;
+  signupWithEmail: (email: string, password: string, displayName?: string) => Promise<User>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
-  updateUserEmail: (newEmail: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -49,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (displayName) {
       await updateProfile(credential.user, { displayName });
     }
+    return credential.user;
   }, []);
 
   const loginWithGoogle = useCallback(async () => {
@@ -76,12 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  const updateUserEmail = useCallback(async (newEmail: string) => {
-    if (!auth.currentUser) throw new Error('No user logged in');
-    await updateEmail(auth.currentUser, newEmail);
-    await sendEmailVerification(auth.currentUser);
-  }, []);
-
   const value = useMemo(
     () => ({
       user,
@@ -90,10 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signupWithEmail,
       loginWithGoogle,
       logout,
-      changePassword,
-      updateUserEmail
+      changePassword
     }),
-    [user, loading, loginWithEmail, signupWithEmail, loginWithGoogle, logout, changePassword, updateUserEmail]
+    [user, loading, loginWithEmail, signupWithEmail, loginWithGoogle, logout, changePassword]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

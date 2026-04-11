@@ -1,7 +1,7 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
-export type ProfileData = {
+type ProfileData = {
     firstName: string;
     lastName: string;
     email: string;
