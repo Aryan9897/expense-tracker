@@ -2,7 +2,8 @@
 
 # Environments & credentials
 .env
-.env.*
+.env.local
+.env.*.local
 *.env
 .credentials/
 *.pem

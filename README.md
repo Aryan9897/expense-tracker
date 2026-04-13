@@ -58,6 +58,9 @@ AI Expense Tracker/
 │   │   │   ├── Signup.tsx            # Account creation form
 │   │   │   ├── Profile.tsx           # Edit name, email, phone
 │   │   │   └── ChangePassword.tsx    # Update password (email/password users only)
+│   │   ├── hooks/                    # Custom React hooks
+│   │   │   ├── useExpenses.ts        # Expense state, CRUD operations, and data fetching
+│   │   │   └── useReceiptUpload.ts   # Receipt upload, presigned URL handling, and polling
 │   │   ├── contexts/
 │   │   │   └── AuthContext.tsx       # Firebase auth state + login/signup/logout methods
 │   │   ├── services/

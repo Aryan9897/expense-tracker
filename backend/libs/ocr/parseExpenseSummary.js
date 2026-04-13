@@ -5,7 +5,7 @@
  * Returns a structured expense object, or {} if parsing fails.
  */
 export const parseOcrResponse = (text) => {
-  if (!text) return {};
+  if (!text) return null;
 
   // Strip markdown code fences if present
   const stripped = text.replace(/```(?:json)?\n?/g, "").trim();
@@ -19,6 +19,6 @@ export const parseOcrResponse = (text) => {
       category: parsed.category ?? null
     };
   } catch {
-    return {};
+    return null;
   }
 };

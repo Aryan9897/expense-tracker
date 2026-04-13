@@ -55,20 +55,27 @@ export const handler = async (event) => {
     // 3. Parse structured fields
     const parsed = parseOcrResponse(rawText);
 
-    // 4. Store in DynamoDB
-    const item = {
-      userId,
-      expenseId: randomUUID(),
-      source: "receipt",
-      receiptKey: key,
-      merchant: parsed.merchant,
-      amount: parsed.amount,
-      date: parsed.date,
-      category: parsed.category,
-      createdAt: new Date().toISOString()
-    };
+    if (!parsed) {
+      console.warn("OCR parsing failed for receipt:", key);
+      return { statusCode: 422, body: "Parse failed" };
+    }
 
-    await ddb.send(new PutCommand({ TableName: tableName, Item: item }));
+    // 4. Store valid expense in DynamoDB
+    await ddb.send(new PutCommand({
+      TableName: tableName,
+      Item: {
+        userId,
+        expenseId: randomUUID(),
+        source: "receipt",
+        status: "pending",
+        receiptKey: key,
+        merchant: parsed.merchant,
+        amount: parsed.amount,
+        date: parsed.date,
+        category: parsed.category,
+        createdAt: new Date().toISOString()
+      }
+    }));
 
     return { statusCode: 200, body: "OK" };
   } catch (err) {

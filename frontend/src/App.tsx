@@ -12,7 +12,6 @@ function App() {
   const [view, setView] = useState<'login' | 'signup' | 'dashboard' | 'profile' | 'change-password'>(
     user ? 'dashboard' : 'login'
   );
-  const [email, setEmail] = useState('');
   const [profile, setProfile] = useState({
     firstName: '',
     lastName: '',
@@ -80,7 +79,6 @@ function App() {
 
       await UserService.updateUserProfile(createdUser.uid, newProfile);
 
-      setEmail(data.email);
       setAuth({ password: data.password, confirmPassword: data.confirmPassword });
     } catch (error) {
       console.error('Signup failed', error);
@@ -126,12 +124,9 @@ function App() {
     <div className="app-shell">
       {view === 'login' ? (
         <Login
-          email={email}
-          onEmailChange={(value) => {
-            setEmail(value);
-            setProfile((prev) => ({ ...prev, email: value }));
-          }}
-          onPasswordSignIn={(password) => handleEmailLogin(email, password)}
+          email={profile.email}
+          onEmailChange={(value) => setProfile((prev) => ({ ...prev, email: value }))}
+          onPasswordSignIn={(password) => handleEmailLogin(profile.email, password)}
           onGoogleSignIn={handleGoogleLogin}
           onSignup={() => setView('signup')}
           isSubmitting={authPending}
@@ -163,7 +158,6 @@ function App() {
                 await UserService.updateUserProfile(user.uid, data);
 
                 setProfile(data);
-                setEmail((prev) => prev || data.email);
                 setView('dashboard');
               } catch (err: any) {
                 console.error("Failed to save profile", err);

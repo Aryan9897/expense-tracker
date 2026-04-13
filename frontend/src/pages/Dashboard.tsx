@@ -1,25 +1,21 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StatCard } from '../components/StatCard';
 import { Modal } from '../components/Modal';
 import { ChatWidget } from '../components/ChatWidget';
 import { Expense, ExpenseTotals } from '../types/expense';
 import { useAuth } from '../contexts/AuthContext';
+import { useExpenses } from '../hooks/useExpenses';
+import { useReceiptUpload } from '../hooks/useReceiptUpload';
 import styles from './Dashboard.module.css';
 
-const sortByDateDesc = (list: Expense[]) =>
-  [...list].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
 const computeTotals = (expenses: Expense[]): ExpenseTotals => {
-  const spent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const spent = expenses.reduce((sum, e) => sum + e.amount, 0);
   const pending = expenses
-    .filter((expense) => expense.status === 'pending')
-    .reduce((sum, expense) => sum + expense.amount, 0);
-  const receiptCount = expenses.filter((expense) => expense.source === 'receipt').length;
-
+    .filter((e) => e.status === 'pending')
+    .reduce((sum, e) => sum + e.amount, 0);
+  const receiptCount = expenses.filter((e) => e.source === 'receipt').length;
   return { spent, pending, receiptCount };
 };
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 type DashboardProps = {
   onSignOut: () => void;
@@ -29,228 +25,34 @@ type DashboardProps = {
 export function Dashboard({ onSignOut, onOpenProfile }: DashboardProps) {
   const { user } = useAuth();
   const email = user?.email || '';
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [form, setForm] = useState({
-    merchant: '',
-    category: 'Groceries',
-    amount: '',
-    date: '',
-    status: 'pending',
-    customCategory: ''
-  });
-  const [categories, setCategories] = useState(['Groceries', 'Transport', 'Software', 'Coffee']);
-  const totals: ExpenseTotals = computeTotals(expenses);
-  const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
-  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
-  const [processingReceipt, setProcessingReceipt] = useState(false);
-  const [processingTimedOut, setProcessingTimedOut] = useState(false);
-  const knownExpenseIdsRef = useRef<Set<string>>(new Set());
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  const getAuthHeaders = async (): Promise<Record<string, string>> => {
-    if (!user) throw new Error('Not authenticated');
-    const token = await user.getIdToken();
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  };
+  const {
+    expenses,
+    setExpenses,
+    form,
+    setForm,
+    categories,
+    isAddExpenseModalOpen,
+    setIsAddExpenseModalOpen,
+    editingExpenseId,
+    handleRemove,
+    handleSaveExpense,
+    handleCloseModal,
+    handleEdit,
+    getAuthHeaders,
+  } = useExpenses();
 
-  const handleRemove = async (id: string) => {
-    const confirmed = window.confirm('Are you sure you want to delete the expense?');
-    if (!confirmed) return;
+  const {
+    fileInputRef,
+    uploadStatus,
+    processingReceipt,
+    processingTimedOut,
+    handleFileSelect,
+  } = useReceiptUpload(expenses, setExpenses, getAuthHeaders);
 
-    if (!API_BASE_URL) {
-      console.error('VITE_API_BASE_URL is not set');
-      return;
-    }
-
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}/expense`, {
-        method: 'DELETE',
-        headers,
-        body: JSON.stringify({ expenseId: id })
-      });
-
-      if (!res.ok) {
-        console.error('Failed to delete expense', await res.text());
-        return;
-      }
-
-      setExpenses((prev) => prev.filter((expense) => expense.id !== id));
-    } catch (error) {
-      console.error('Failed to delete expense', error);
-    }
-  };
-
-  const handleAdd = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const amountValue = Number(form.amount);
-    if (!form.merchant.trim() || !form.date || Number.isNaN(amountValue)) return;
-
-    let finalCategory = form.category;
-    if (form.category === 'create-new') {
-      if (!form.customCategory.trim()) return;
-      finalCategory = form.customCategory.trim();
-      setCategories((prev) => [...prev, finalCategory]);
-    }
-
-    if (!API_BASE_URL) {
-      console.error('VITE_API_BASE_URL is not set');
-      return;
-    }
-
-    try {
-      const isEditing = Boolean(editingExpenseId);
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}/expense`, {
-        method: isEditing ? 'PUT' : 'POST',
-        headers,
-        body: JSON.stringify({
-          expenseId: editingExpenseId ?? undefined,
-          merchant: form.merchant.trim(),
-          category: finalCategory,
-          amount: amountValue,
-          date: form.date,
-          status: form.status,
-          source: 'manual'
-        })
-      });
-
-      if (!res.ok) {
-        console.error(`Failed to ${isEditing ? 'update' : 'create'} expense`, await res.text());
-        return;
-      }
-
-      const saved = await res.json();
-      const nextExpense: Expense = {
-        id: saved.expenseId ?? saved.id,
-        merchant: saved.merchant,
-        category: saved.category,
-        amount: saved.amount,
-        date: saved.date,
-        status: saved.status,
-        source: saved.source
-      };
-
-      setExpenses((prev) => {
-        if (isEditing) {
-          const updated = prev.map((expense) => (expense.id === nextExpense.id ? nextExpense : expense));
-          return sortByDateDesc(updated);
-        }
-        return sortByDateDesc([nextExpense, ...prev]);
-      });
-      handleCloseModal();
-    } catch (error) {
-      console.error(`Failed to ${editingExpenseId ? 'update' : 'create'} expense`, error);
-    }
-  };
-
-  const handleCloseModal = () => {
-    setForm({ merchant: '', category: 'Groceries', amount: '', date: '', status: 'pending', customCategory: '' });
-    setIsAddExpenseModalOpen(false);
-    setEditingExpenseId(null);
-  };
-
-  const handleEdit = (expense: Expense) => {
-    if (!categories.includes(expense.category)) {
-      setCategories((prev) => [...prev, expense.category]);
-    }
-    setForm({
-      merchant: expense.merchant,
-      category: expense.category,
-      amount: expense.amount.toString(),
-      date: expense.date,
-      status: expense.status,
-      customCategory: ''
-    });
-    setEditingExpenseId(expense.id);
-    setIsAddExpenseModalOpen(true);
-  };
-
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !API_BASE_URL) return;
-
-    setProcessingTimedOut(false);
-
-    // Reset input so the same file can be re-selected later
-    event.target.value = '';
-
-    setUploadStatus('uploading');
-    try {
-      // Step 1: get presigned upload URL
-      const headers = await getAuthHeaders();
-      const urlRes = await fetch(`${API_BASE_URL}/receipt/upload`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ contentType: file.type || 'image/jpeg' })
-      });
-
-      if (!urlRes.ok) {
-        console.error('Failed to get upload URL', await urlRes.text());
-        setUploadStatus('error');
-        return;
-      }
-
-      const { uploadUrl } = await urlRes.json();
-
-      // Step 2: upload file directly to S3
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type || 'image/jpeg' },
-        body: file
-      });
-
-      if (!uploadRes.ok) {
-        console.error('Failed to upload receipt to S3', uploadRes.status);
-        setUploadStatus('error');
-        return;
-      }
-
-      setUploadStatus('idle');
-      setProcessingReceipt(true);
-      setProcessingTimedOut(false);
-      knownExpenseIdsRef.current = new Set(expenses.map((e) => e.id));
-    } catch (error) {
-      console.error('Receipt upload failed', error);
-      setUploadStatus('error');
-    }
-  };
-
-  useEffect(() => {
-    if (!API_BASE_URL || !user) return;
-
-    const fetchExpenses = async () => {
-      try {
-        const headers = await getAuthHeaders();
-        const res = await fetch(`${API_BASE_URL}/expenses`, { headers });
-        if (!res.ok) {
-          console.error('Failed to load expenses', await res.text());
-          return;
-        }
-        const items = await res.json();
-        const mapped: Expense[] = (items || []).map((item: any) => ({
-          id: item.expenseId ?? item.id,
-          merchant: item.merchant,
-          category: item.category,
-          amount: item.amount,
-          date: item.date,
-          status: item.status,
-          source: item.source
-        }));
-        setExpenses(sortByDateDesc(mapped));
-      } catch (error) {
-        console.error('Failed to load expenses', error);
-      }
-    };
-
-    fetchExpenses();
-  }, [user]);
+  const totals: ExpenseTotals = computeTotals(expenses);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -261,51 +63,6 @@ export function Dashboard({ onSignOut, onOpenProfile }: DashboardProps) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    if (!processingReceipt || !API_BASE_URL || !user) return;
-
-    const POLL_INTERVAL = 4000;
-    const TIMEOUT = 60000;
-    const startTime = Date.now();
-
-    const intervalId = setInterval(async () => {
-      if (Date.now() - startTime > TIMEOUT) {
-        setProcessingTimedOut(true);
-        setProcessingReceipt(false);
-        clearInterval(intervalId);
-        return;
-      }
-
-      try {
-        const headers = await getAuthHeaders();
-        const res = await fetch(`${API_BASE_URL}/expenses`, { headers });
-        if (!res.ok) return;
-
-        const items = await res.json();
-        const mapped: Expense[] = (items || []).map((item: any) => ({
-          id: item.expenseId ?? item.id,
-          merchant: item.merchant,
-          category: item.category,
-          amount: item.amount,
-          date: item.date,
-          status: item.status,
-          source: item.source
-        }));
-
-        const newExpense = mapped.find((e) => !knownExpenseIdsRef.current.has(e.id));
-        if (newExpense) {
-          setExpenses(sortByDateDesc(mapped));
-          setProcessingReceipt(false);
-          clearInterval(intervalId);
-        }
-      } catch (error) {
-        console.error('Polling failed', error);
-      }
-    }, POLL_INTERVAL);
-
-    return () => clearInterval(intervalId);
-  }, [processingReceipt, user]);
 
   return (
     <div className={styles.page}>
@@ -378,8 +135,6 @@ export function Dashboard({ onSignOut, onOpenProfile }: DashboardProps) {
         />
       </section>
 
-
-
       <section className={styles.panel}>
         <div className={styles.panelHead}>
           <div>
@@ -438,7 +193,7 @@ export function Dashboard({ onSignOut, onOpenProfile }: DashboardProps) {
           )}
           {processingTimedOut && (
             <div className={`${styles.skeletonRow} ${styles.skeletonError}`}>
-              <span>Processing is taking longer than expected. Please refresh.</span>
+              <span>Receipt couldn't be parsed. Please add the expense manually.</span>
               <span />
               <span />
               <span />
@@ -457,9 +212,7 @@ export function Dashboard({ onSignOut, onOpenProfile }: DashboardProps) {
               <span>{expense.merchant}</span>
               <span className="muted">{expense.category}</span>
               <span>
-                <span
-                  className={`${styles.pill} ${expense.status === 'cleared' ? styles.success : styles.neutral}`}
-                >
+                <span className={`${styles.pill} ${expense.status === 'cleared' ? styles.success : styles.neutral}`}>
                   {expense.status === 'cleared' ? 'Cleared' : 'Pending'}
                 </span>
               </span>
@@ -503,7 +256,7 @@ export function Dashboard({ onSignOut, onOpenProfile }: DashboardProps) {
         onClose={handleCloseModal}
         title={editingExpenseId ? 'Edit Expense' : 'Add Expense'}
       >
-        <form onSubmit={handleAdd} className={styles.modalForm}>
+        <form onSubmit={handleSaveExpense} className={styles.modalForm}>
           <label>
             <span>Merchant</span>
             <input
@@ -570,11 +323,7 @@ export function Dashboard({ onSignOut, onOpenProfile }: DashboardProps) {
             />
           </label>
           <div className={styles.modalActions}>
-            <button
-              type="button"
-              className="ghost-btn"
-              onClick={handleCloseModal}
-            >
+            <button type="button" className="ghost-btn" onClick={handleCloseModal}>
               Cancel
             </button>
             <button type="submit" className="primary-btn">
